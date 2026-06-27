@@ -23,11 +23,13 @@ export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
 export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/26.3.11579264"
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 
-# Qualcomm QAIRT SDK — update this path after downloading
-if [ -z "$QNN_SDK_ROOT" ]; then
-    echo "WARNING: QNN_SDK_ROOT not set. Set it to your QAIRT SDK path, e.g.:"
-    echo "  export QNN_SDK_ROOT=~/qualcomm/qairt/2.46.0.260424"
+# Qualcomm QAIRT SDK
+export QNN_SDK_ROOT="${QNN_SDK_ROOT:-$HOME/Downloads/qairt/2.46.0.260424}"
+if [ ! -d "$QNN_SDK_ROOT" ]; then
+    echo "WARNING: QNN_SDK_ROOT not found at $QNN_SDK_ROOT"
+    echo "  Download QAIRT SDK 2.46.0.260424 and update this path."
 fi
+export LD_LIBRARY_PATH="$QNN_SDK_ROOT/lib/aarch64-android:${LD_LIBRARY_PATH:-}"
 
 echo "DC-Ops environment ready."
 echo "  Python:      $(python --version)"

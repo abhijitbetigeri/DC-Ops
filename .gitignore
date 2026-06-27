@@ -1,11 +1,17 @@
 node_modules/
 .DS_Store
+.env
 .venv/
 __pycache__/
 *.pyc
 *.pte
 *.aar
+*.pth
 executorch/
+models/weights/
+models/runs/
+data/dataset/
+data/visualized/
 *.egg-info/
 build/
 dist/

@@ -9,6 +9,7 @@ import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
 import com.dcops.ar.inference.DetectionResult
+import com.dcops.ar.inference.ModelManager
 
 /**
  * Custom [View] that draws detection polygons on top of the live camera preview.
@@ -67,7 +68,7 @@ class PolygonOverlayView @JvmOverloads constructor(
         for (det in detections) {
             if (det.polygon.isEmpty()) continue
 
-            val color = colorForLabel(det.label)
+            val color = colorForClass(det.classId)
 
             // Build the polygon path in pixel coordinates
             val path = Path()
@@ -112,18 +113,30 @@ class PolygonOverlayView @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Map a detection label to an overlay color.
-     * Extend this as new classes are added.
-     */
-    private fun colorForLabel(label: String): Int {
-        return when {
-            label.contains("green", ignoreCase = true) -> Color.parseColor("#00E676")
-            label.contains("amber", ignoreCase = true) -> Color.parseColor("#FFC107")
-            label.contains("red", ignoreCase = true)   -> Color.parseColor("#FF1744")
-            label.contains("cable", ignoreCase = true) -> Color.parseColor("#2979FF")
-            label.contains("label", ignoreCase = true) -> Color.parseColor("#E040FB")
-            else -> Color.parseColor("#FFFFFF")
-        }
+    companion object {
+        // One distinct color per DC class for visual separation
+        private val CLASS_COLORS = intArrayOf(
+            Color.parseColor("#4CAF50"),  //  0 server rack      — green
+            Color.parseColor("#FF9800"),  //  1 compute tray     — orange
+            Color.parseColor("#9C27B0"),  //  2 NVLink switch    — purple
+            Color.parseColor("#2196F3"),  //  3 network switch   — blue
+            Color.parseColor("#F44336"),  //  4 power shelf      — red
+            Color.parseColor("#00BCD4"),  //  5 cable            — cyan
+            Color.parseColor("#FFEB3B"),  //  6 network port     — yellow
+            Color.parseColor("#00E676"),  //  7 LED indicator    — bright green
+            Color.parseColor("#E040FB"),  //  8 label            — magenta
+            Color.parseColor("#795548"),  //  9 fan              — brown
+            Color.parseColor("#03A9F4"),  // 10 cooling manifold — light blue
+            Color.parseColor("#FF5722"),  // 11 cable cartridge  — deep orange
+            Color.parseColor("#FFC107"),  // 12 power connector  — amber
+            Color.parseColor("#8BC34A"),  // 13 drive bay        — light green
+            Color.parseColor("#607D8B"),  // 14 management port  — blue grey
+            Color.parseColor("#FF1744"),  // 15 DPU              — red accent
+        )
+    }
+
+    private fun colorForClass(classId: Int): Int {
+        if (classId in CLASS_COLORS.indices) return CLASS_COLORS[classId]
+        return Color.WHITE
     }
 }

@@ -55,6 +55,9 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
+    // ExecuTorch runtime (place executorch.aar in app/libs/)
+    implementation(files("libs/executorch.aar"))
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 

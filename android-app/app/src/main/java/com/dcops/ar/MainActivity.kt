@@ -43,12 +43,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         modelManager = ModelManager()
-        modelManager.init { ready ->
+        modelManager.init(this) { ready ->
             runOnUiThread {
                 binding.statusText.text = if (ready) {
                     getString(R.string.status_ready)
                 } else {
-                    getString(R.string.status_waiting)
+                    "Model load failed"
                 }
             }
         }

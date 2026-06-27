@@ -1,6 +1,19 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand palette (shared with the web mockup) -->
+    <color name="brand_bg">#07131F</color>
+    <color name="brand_panel">#111D2F</color>
+    <color name="brand_panel_alt">#0A0F16</color>
+    <color name="brand_accent">#59D8FF</color>
+    <color name="brand_accent2">#7C8CFF</color>
+    <color name="brand_text">#F3F7FF</color>
+    <color name="brand_muted">#9EB2CB</color>
+    <color name="brand_stroke">#2A3B52</color>
+    <color name="scrim">#CC0B1622</color>
+
+    <!-- Detection class colors -->
     <color name="overlay_green">#FF00E676</color>
     <color name="overlay_amber">#FFFFC107</color>
     <color name="overlay_red">#FFFF1744</color>

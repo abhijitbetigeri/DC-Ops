@@ -2,12 +2,17 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginStart="14dp"
+    android:layout_marginEnd="14dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
+    android:background="@drawable/card_bg"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
-    android:paddingTop="10dp"
-    android:paddingBottom="10dp">
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp">
 
     <View
         android:id="@+id/classDot"
@@ -26,7 +31,7 @@
             android:id="@+id/findingLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
+            android:textColor="@color/brand_text"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -34,13 +39,15 @@
             android:id="@+id/findingMeta"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#9EB2CB"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/brand_muted"
             android:textSize="12sp" />
 
         <TextView
             android:id="@+id/findingSerial"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:textColor="@color/overlay_amber"
             android:textSize="12sp"
             android:visibility="gone" />

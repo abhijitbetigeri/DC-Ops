@@ -4,17 +4,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0F16">
+    android:background="@color/brand_bg">
 
     <!-- Top bar -->
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="#11161F"
+        android:background="@color/brand_panel"
+        android:elevation="4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="10dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -25,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/back"
-            android:textColor="@color/white" />
+            android:textColor="@color/brand_text" />
 
         <TextView
             android:layout_width="0dp"
@@ -33,7 +37,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/audit_log_title"
-            android:textColor="@color/white"
+            android:textColor="@color/brand_text"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -43,16 +47,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/export"
-            android:textColor="@color/overlay_green" />
+            android:textColor="@color/brand_accent" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/countText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:padding="12dp"
-        android:textColor="#9EB2CB"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="6dp"
+        android:textColor="@color/brand_muted"
         android:textSize="13sp"
+        android:textStyle="bold"
         app:layout_constraintTop_toBottomOf="@id/topBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -62,7 +70,8 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingBottom="80dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="96dp"
         app:layout_constraintTop_toBottomOf="@id/countText"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -72,8 +81,9 @@
         android:id="@+id/emptyState"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:gravity="center"
         android:text="@string/audit_log_empty"
-        android:textColor="#5E708A"
+        android:textColor="@color/brand_muted"
         android:textSize="15sp"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="@id/findingsList"
@@ -89,6 +99,8 @@
         android:layout_margin="16dp"
         android:text="@string/clear_log"
         android:textColor="@color/overlay_red"
+        app:cornerRadius="16dp"
+        app:strokeColor="@color/overlay_red"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

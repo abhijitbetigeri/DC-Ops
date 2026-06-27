@@ -1,5 +1,21 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.DCOps" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@color/black</item>
+        <!-- Brand accents drive Material widgets (filled buttons, sliders, dialogs) -->
+        <item name="colorPrimary">@color/brand_accent</item>
+        <item name="colorOnPrimary">@color/brand_bg</item>
+        <item name="colorSecondary">@color/brand_accent2</item>
+        <item name="colorOnSecondary">@color/brand_bg</item>
+
+        <item name="android:windowBackground">@color/brand_bg</item>
+        <item name="android:statusBarColor">@color/brand_bg</item>
+        <item name="android:navigationBarColor">@color/brand_bg</item>
+
+        <!-- Rounded corners across Material components -->
+        <item name="shapeAppearanceSmallComponent">@style/Shape.DCOps.Small</item>
+    </style>
+
+    <style name="Shape.DCOps.Small" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
     </style>
 </resources>

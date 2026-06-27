@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DC-Ops</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div>
+          <p class="eyebrow">On-device support copilot</p>
+          <h1>DC-Ops</h1>
+        </div>
+        <div class="badge">Offline ready</div>
+      </header>
+
+      <main>
+        <section class="card hero">
+          <div>
+            <h2>Diagnose device issues locally</h2>
+            <p>Camera input, logs, and troubleshooting steps stay on the device.</p>
+          </div>
+          <button id="scanButton">Scan device</button>
+        </section>
+
+        <section class="card">
+          <h3>Detected issue</h3>
+          <div id="issueBox" class="issue-box">No scan yet</div>
+        </section>
+
+        <section class="card">
+          <h3>Suggested actions</h3>
+          <ul id="stepsList"></ul>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

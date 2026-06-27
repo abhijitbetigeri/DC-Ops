@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">DC-Ops</string>
+    <string name="camera_permission_rationale">Camera permission is needed to detect server rack status.</string>
+    <string name="camera_permission_denied">Camera permission denied. Please grant it in Settings.</string>
+    <string name="overlay_label">Detection Overlay</string>
+    <string name="status_waiting">Waiting for model…</string>
+    <string name="status_ready">Model ready</string>
+    <string name="status_processing">Processing frame…</string>
+</resources>

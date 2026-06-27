@@ -1,9 +1,34 @@
 <resources>
     <string name="app_name">DC-Ops</string>
+
+    <!-- Camera -->
     <string name="camera_permission_rationale">Camera permission is needed to detect server rack status.</string>
     <string name="camera_permission_denied">Camera permission denied. Please grant it in Settings.</string>
     <string name="overlay_label">Detection Overlay</string>
+
+    <!-- Status -->
     <string name="status_waiting">Waiting for model…</string>
     <string name="status_ready">Model ready</string>
-    <string name="status_processing">Processing frame…</string>
+    <string name="status_processing">Detecting…</string>
+
+    <!-- Main controls -->
+    <string name="capture">Capture</string>
+    <string name="view_log">Audit Log</string>
+    <string name="settings_short">Settings</string>
+    <string name="detections_zero">0 detections</string>
+    <string name="capture_none">No detections to log</string>
+
+    <!-- Settings dialog -->
+    <string name="settings_title">Detection settings</string>
+    <string name="settings_confidence">Minimum confidence to surface a detection</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="percent_fmt">%1$d%%</string>
+
+    <!-- Audit log -->
+    <string name="audit_log_title">Audit Log</string>
+    <string name="audit_log_empty">No findings logged yet.\nTap Capture on the camera screen.</string>
+    <string name="back">Back</string>
+    <string name="export">Export</string>
+    <string name="clear_log">Clear</string>
 </resources>

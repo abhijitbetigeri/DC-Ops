@@ -1,0 +1,16 @@
+<resources>
+    <plurals name="detections_count">
+        <item quantity="one">%d detection</item>
+        <item quantity="other">%d detections</item>
+    </plurals>
+
+    <plurals name="capture_saved">
+        <item quantity="one">Logged %d finding</item>
+        <item quantity="other">Logged %d findings</item>
+    </plurals>
+
+    <plurals name="findings_count">
+        <item quantity="one">%d finding logged</item>
+        <item quantity="other">%d findings logged</item>
+    </plurals>
+</resources>

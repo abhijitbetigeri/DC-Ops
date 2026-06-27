@@ -67,7 +67,8 @@ class PolygonOverlayView @JvmOverloads constructor(
         for (det in detections) {
             if (det.polygon.isEmpty()) continue
 
-            val color = colorForLabel(det.label)
+            // Prefer the frozen taxonomy color (by classId); fall back to label match.
+            val color = det.dcClass?.color ?: colorForLabel(det.label)
 
             // Build the polygon path in pixel coordinates
             val path = Path()

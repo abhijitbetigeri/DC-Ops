@@ -19,19 +19,79 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Status bar at the bottom -->
+    <!-- Live detection count chip (top-start) -->
+    <TextView
+        android:id="@+id/detectionChip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:background="@drawable/chip_bg"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:text="@string/detections_zero"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Settings (top-end) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/settingsButton"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:text="@string/settings_short"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Status line -->
     <TextView
         android:id="@+id/statusText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="@color/status_bg"
-        android:padding="12dp"
+        android:gravity="center"
+        android:padding="10dp"
         android:text="@string/status_waiting"
         android:textColor="@color/white"
-        android:textSize="14sp"
-        android:gravity="center"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toTopOf="@id/controlBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Bottom controls -->
+    <LinearLayout
+        android:id="@+id/controlBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/status_bg"
+        android:orientation="horizontal"
+        android:padding="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/captureButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="2"
+            android:text="@string/capture" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/logButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:text="@string/view_log"
+            android:textColor="@color/white" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

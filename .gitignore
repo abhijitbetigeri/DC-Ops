@@ -11,3 +11,12 @@ build/
 dist/
 .gradle/
 local.properties
+
+# Dataset binaries — large/sensitive, shared out-of-band (keep .gitkeep + READMEs)
+data/images/**/*.jpg
+data/images/**/*.jpeg
+data/images/**/*.png
+data/labels/**/*.txt
+
+# Training run outputs
+runs/

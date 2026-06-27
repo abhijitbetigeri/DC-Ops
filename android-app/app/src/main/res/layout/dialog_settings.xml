@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_confidence"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/confidenceValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <SeekBar
+        android:id="@+id/confidenceSeek"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100" />
+
+</LinearLayout>

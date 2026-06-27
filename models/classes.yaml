@@ -1,0 +1,13 @@
+# DC-Ops class taxonomy — FROZEN (ARCHITECTURE.md §5.1).
+#
+# Single source of truth for classId <-> label. This MUST stay identical to
+# android-app/.../inference/DcClass.kt. Changing either without the other breaks
+# the model <-> app contract. Tell the whole team if you edit this.
+
+names:
+  0: led_green
+  1: led_amber
+  2: led_red
+  3: led_off
+  4: cable
+  5: label    # nameplate / serial-number region (feeds OCR stretch goal)

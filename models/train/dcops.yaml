@@ -1,0 +1,19 @@
+# Ultralytics dataset config for DC-Ops YOLOv8n fine-tuning.
+#
+# Point `path` at the dataset root and lay images/labels out in YOLO format:
+#   data/images/train/*.jpg   data/labels/train/*.txt
+#   data/images/val/*.jpg     data/labels/val/*.txt
+# Each label .txt line: `class_id cx cy w h` (normalized 0..1).
+
+path: ../../data        # dataset root, relative to this file
+train: images/train
+val: images/val
+
+# Class names — MUST match models/classes.yaml and DcClass.kt
+names:
+  0: led_green
+  1: led_amber
+  2: led_red
+  3: led_off
+  4: cable
+  5: label

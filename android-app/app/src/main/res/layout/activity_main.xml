@@ -19,6 +19,56 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Backend toggle + metrics at top -->
+    <LinearLayout
+        android:id="@+id/metricsBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#AA000000"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/backendLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="XNNPACK (CPU)"
+            android:textColor="#00E676"
+            android:textSize="13sp"
+            android:fontFamily="monospace" />
+
+        <TextView
+            android:id="@+id/fpsText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-- FPS"
+            android:textColor="#FFEB3B"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:paddingEnd="12dp" />
+
+        <TextView
+            android:id="@+id/latencyText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--ms"
+            android:textColor="#FFEB3B"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:paddingEnd="12dp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/backendSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NPU"
+            android:textColor="@color/white"
+            android:textSize="12sp" />
+    </LinearLayout>
+
     <!-- Status bar at the bottom -->
     <TextView
         android:id="@+id/statusText"

@@ -20,6 +20,7 @@ class ModelManager {
 
     companion object {
         const val MODEL_FILENAME = "dc_ops_yolov8n_seg.pte"
+        const val QNN_MODEL_FILENAME = "dc_ops_retinanet_qnn.pte"
         const val INPUT_SIZE = 640
         const val CONF_THRESHOLD = 0.35f
         const val IOU_THRESHOLD = 0.45f
@@ -258,6 +259,23 @@ class ModelManager {
             FileOutputStream(file).use { output -> input.copyTo(output) }
         }
         return file.absolutePath
+    }
+
+    fun switchModel(context: Context, modelFile: String, onReady: (Boolean) -> Unit) {
+        isReady = false
+        Thread {
+            try {
+                module?.destroy()
+                val modelPath = assetFilePath(context, modelFile)
+                module = Module.load(modelPath)
+                isReady = true
+                onReady(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                isReady = false
+                onReady(false)
+            }
+        }.start()
     }
 
     fun shutdown() {

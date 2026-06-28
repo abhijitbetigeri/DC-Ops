@@ -57,6 +57,9 @@ dependencies {
 
     // ExecuTorch runtime (place executorch.aar in app/libs/)
     implementation(files("libs/executorch.aar"))
+    implementation("com.facebook.soloader:nativeloader:0.10.5")
+    implementation("com.facebook.soloader:soloader:0.10.5")
+    implementation("com.facebook.fbjni:fbjni:0.5.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

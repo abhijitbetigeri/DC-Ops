@@ -126,7 +126,7 @@ slide4.addText("WHY ON-DEVICE?", {
 const reasons = [
   { stat: "0ms", label: "Cloud Latency", desc: "No round-trip — inference directly on Hexagon NPU" },
   { stat: "100%", label: "Offline", desc: "Works in air-gapped rooms with zero connectivity" },
-  { stat: "0 bytes", label: "Data Leaked", desc: "Serial numbers and infra data never leave the device" },
+  { stat: "0 B", label: "Data Leaked", desc: "Serial numbers and infra data never leave the device" },
   { stat: "4-5x", label: "Power Efficient", desc: "NPU vs CPU — longer battery life for extended inspections" },
 ];
 
@@ -137,15 +137,16 @@ reasons.forEach((r, i) => {
     fill: { color: BG_CARD }, rectRadius: 0.1,
   });
   slide4.addText(r.stat, {
-    x: x, y: 1.8, w: 2.7, h: 1.0,
-    fontSize: 48, fontFace: "Arial Black", color: ACCENT, bold: true, align: "center",
+    x: x, y: 1.85, w: 2.7, h: 1.1,
+    fontSize: 44, fontFace: "Arial Black", color: ACCENT, bold: true,
+    align: "center", valign: "middle", fit: "shrink",
   });
   slide4.addText(r.label, {
-    x: x, y: 2.8, w: 2.7, h: 0.5,
+    x: x, y: 3.05, w: 2.7, h: 0.5,
     fontSize: 16, fontFace: "Arial", color: TEXT_WHITE, bold: true, align: "center",
   });
   slide4.addText(r.desc, {
-    x: x + 0.2, y: 3.4, w: 2.3, h: 1.2,
+    x: x + 0.2, y: 3.6, w: 2.3, h: 1.2,
     fontSize: 12, fontFace: "Arial", color: TEXT_MUTED, align: "center", lineSpacingMultiple: 1.3,
   });
 });
@@ -377,27 +378,31 @@ classes.forEach((c, i) => {
   });
 });
 
-// ============ SLIDE 9b: RETINANET DETECTIONS ============
-let slide9b = pres.addSlide();
-slide9b.background = { color: BG_DARK };
-slide9b.addText("RETINANET IN ACTION", {
-  x: 0.8, y: 0.4, w: 11, h: 0.7,
-  fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
+// ============ SLIDE: LIVE ON THE S25 ============
+let slideLive = pres.addSlide();
+slideLive.background = { color: BG_DARK };
+slideLive.addText("LIVE ON THE GALAXY S25", {
+  x: 0.8, y: 0.35, w: 11.7, h: 0.7,
+  fontSize: 34, fontFace: "Arial Black", color: ACCENT, bold: true,
 });
-slide9b.addText("Real detections on a Raspberry Pi & USB hub — mirrors our physical demo prop", {
-  x: 0.8, y: 1.15, w: 11, h: 0.5,
-  fontSize: 15, fontFace: "Arial", color: TEXT_MUTED,
+slideLive.addText("Running on real Snapdragon 8 Elite hardware — detection + AR cable-matching guidance, fully offline", {
+  x: 0.8, y: 1.05, w: 11.7, h: 0.4,
+  fontSize: 14, fontFace: "Arial", color: ACCENT3, italic: true, bold: true,
 });
 
-const demoImg1 = "/Users/abhijitbetigeri/projects/DC-Ops/data/retinanet_demo/det_pc_ports_valid_20230515_214424.jpg";
-const demoImg2 = "/Users/abhijitbetigeri/projects/DC-Ops/data/retinanet_demo/det_pc_ports_valid_20230515_212627.jpg";
+const shots = [
+  { f: "/Users/abhijitbetigeri/projects/DC-Ops/presentation/Screenshot 2026-06-28 124107.png", cap: "Server Scan — multi-class detection\n(fans, power shelf, ports)" },
+  { f: "/Users/abhijitbetigeri/projects/DC-Ops/presentation/Screenshot 2026-06-28 124051.png", cap: "Cable Match — highlights the exact\nport for the next cable" },
+  { f: "/Users/abhijitbetigeri/projects/DC-Ops/presentation/Screenshot 2026-06-28 123221.png", cap: "Mission Control — guided\nrack-assembly workflow" },
+];
 
-slide9b.addImage({ path: demoImg1, x: 0.8, y: 1.8, w: 5.6, h: 4.2, sizing: { type: "contain", w: 5.6, h: 4.2 } });
-slide9b.addImage({ path: demoImg2, x: 6.8, y: 1.8, w: 5.6, h: 4.2, sizing: { type: "contain", w: 5.6, h: 4.2 } });
-
-slide9b.addText("All USB + RJ45 ports detected as 'network port' — fully on-device", {
-  x: 0.8, y: 6.1, w: 11, h: 0.4,
-  fontSize: 13, fontFace: "Arial", color: TEXT_LIGHT, italic: true, align: "center",
+shots.forEach((s, i) => {
+  const x = 1.55 + i * 3.5;
+  slideLive.addImage({ path: s.f, x: x, y: 1.55, w: 2.6, h: 4.6, sizing: { type: "contain", w: 2.6, h: 4.6 } });
+  slideLive.addText(s.cap, {
+    x: x - 0.3, y: 6.25, w: 3.2, h: 0.7,
+    fontSize: 11, fontFace: "Arial", color: TEXT_LIGHT, align: "center", lineSpacingMultiple: 1.15,
+  });
 });
 
 // ============ SLIDE 10: RAG KNOWLEDGE OVERLAY ============

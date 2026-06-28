@@ -4,21 +4,28 @@ On-Device Data Center Operations Assistant for the Qualcomm x Meta ExecuTorch Ha
 
 ## Project
 
-Real-time camera-based tool for data center technicians. Detects LED status, reads serial numbers via OCR, flags cable issues — all on-device on Samsung Galaxy S25 Ultra (Snapdragon 8 Elite, SM8750).
+Real-time camera-based tool for data center technicians. Detects 16 types of DC components with AR overlay, plus RAG-powered knowledge retrieval for specs and troubleshooting — all on-device on Samsung Galaxy S25 Ultra (Snapdragon 8 Elite, SM8750).
 
 ## Architecture
 
-- **Detection**: YOLOv8n (INT8 quantized) → ExecuTorch → QNN → Snapdragon NPU
-- **OCR**: Lightweight CRNN → ExecuTorch → QNN → Snapdragon NPU
-- **App**: Android (Kotlin) + CameraX + ExecuTorch AAR
-- **Storage**: Local SQLite audit log
+- **Detection (primary)**: RetinaNet-ResNet50-FPN (INT8) → ExecuTorch → QNN HTP → Snapdragon NPU
+- **Detection (fallback)**: YOLOv8n-seg v3 → ExecuTorch → XNNPACK → CPU
+- **RAG**: CLIP ViT-B-32 embeddings + FAISS index (160KB, on-device)
+- **App**: Android (Kotlin) + CameraX + ExecuTorch AAR + backend toggle
 
 ## Key Paths
 
-- `models/export/` — PyTorch → .pte export scripts
-- `android/app/` — Android application
-- `scripts/` — Build and setup utilities
+- `android-app/` — Android application (Kotlin, CameraX, ExecuTorch)
+- `data/knowledge_base/` — RAG index + component documentation
+- `models/` — Trained weights + .pte files
+- `notebooks/` — Colab notebooks for training + QNN export
+- `scripts/` — Merge datasets, build RAG, benchmark
 - `executorch/` — ExecuTorch SDK (gitignored)
+
+## Models
+
+- `dc_ops_retinanet_qnn.pte` — RetinaNet QNN HTP for NPU (36MB)
+- `dc_ops_yolov8n_seg.pte` — YOLOv8n-seg XNNPACK for CPU (13MB)
 
 ## Environment
 
@@ -29,12 +36,8 @@ source scripts/setup_env.sh
 ## Build
 
 ```bash
-# Export models
-python models/export/export_yolo.py --soc_model SM8750
-python models/export/export_ocr.py --soc_model SM8750
-
-# Build Android runtime
-cd executorch && ./scripts/build_android_library.sh
+cd android-app && ./gradlew assembleDebug
+adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ## Target Device

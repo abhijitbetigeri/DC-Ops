@@ -29,10 +29,11 @@ import com.dcops.ar.inference.DetectionResult
 class DetectionStabilizer {
 
     private companion object {
-        // Hold a dropped track this long (~13 frames @30fps) before removing it.
-        const val TTL_MS = 450L
+        // Hold a dropped track only briefly so the overlay tracks the camera with low
+        // latency (was 450ms, which felt laggy). ~150ms still smooths 1-2 frame dropouts.
+        const val TTL_MS = 150L
         // Secondary cap: remove after this many consecutive missed frames.
-        const val MAX_MISSES = 10
+        const val MAX_MISSES = 4
         // Bbox-IoU gate for same-class association (lenient: noisy hulls wobble).
         const val IOU_MATCH = 0.30f
         // Normalized centroid-distance fallback when IoU == 0 (fast camera pans).

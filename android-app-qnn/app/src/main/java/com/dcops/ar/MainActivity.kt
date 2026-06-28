@@ -92,9 +92,8 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     modelManager.processFrame(imageProxy) { results ->
                         runOnUiThread {
-                            binding.overlayView.updateDetections(
-                                stabilizer.update(results, android.os.SystemClock.uptimeMillis())
-                            )
+                            // Stabilization removed: draw raw per-frame detections directly.
+                            binding.overlayView.updateDetections(results)
                             binding.statusText.text = getString(R.string.status_processing)
                         }
                     }

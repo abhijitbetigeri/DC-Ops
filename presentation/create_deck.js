@@ -379,6 +379,29 @@ demoSteps.forEach((d, i) => {
   });
 });
 
+// ============ SLIDE 9b: RETINANET DETECTIONS ============
+let slide9b = pres.addSlide();
+slide9b.background = { color: BG_DARK };
+slide9b.addText("RETINANET IN ACTION", {
+  x: 0.8, y: 0.4, w: 11, h: 0.7,
+  fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
+});
+slide9b.addText("Real detections on a Raspberry Pi & USB hub — mirrors our physical demo prop", {
+  x: 0.8, y: 1.15, w: 11, h: 0.5,
+  fontSize: 15, fontFace: "Arial", color: TEXT_MUTED,
+});
+
+const demoImg1 = "/Users/abhijitbetigeri/projects/DC-Ops/data/retinanet_demo/det_pc_ports_valid_20230515_214424.jpg";
+const demoImg2 = "/Users/abhijitbetigeri/projects/DC-Ops/data/retinanet_demo/det_pc_ports_valid_20230515_212627.jpg";
+
+slide9b.addImage({ path: demoImg1, x: 0.8, y: 1.8, w: 5.6, h: 4.2, sizing: { type: "contain", w: 5.6, h: 4.2 } });
+slide9b.addImage({ path: demoImg2, x: 6.8, y: 1.8, w: 5.6, h: 4.2, sizing: { type: "contain", w: 5.6, h: 4.2 } });
+
+slide9b.addText("All USB + RJ45 ports detected as 'network port' — fully on-device", {
+  x: 0.8, y: 6.1, w: 11, h: 0.4,
+  fontSize: 13, fontFace: "Arial", color: TEXT_LIGHT, italic: true, align: "center",
+});
+
 // ============ SLIDE 10: RAG KNOWLEDGE OVERLAY ============
 let slide10 = pres.addSlide();
 slide10.background = { color: BG_DARK };

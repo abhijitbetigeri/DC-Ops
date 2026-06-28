@@ -52,10 +52,12 @@ class ModelManager {
     fun processFrame(imageProxy: ImageProxy, onResult: (List<DetectionResult>) -> Unit) {
         val loadedModule = module ?: run {
             imageProxy.close()
+            onResult(emptyList())
             return
         }
         if (!isReady) {
             imageProxy.close()
+            onResult(emptyList())
             return
         }
 

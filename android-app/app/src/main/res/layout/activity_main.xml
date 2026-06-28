@@ -24,7 +24,7 @@
     <View
         android:id="@+id/bottomScrim"
         android:layout_width="0dp"
-        android:layout_height="320dp"
+        android:layout_height="260dp"
         android:background="@color/mission_scrim_bottom"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -80,13 +80,13 @@
                         android:text="@string/mission_chip_live"
                         android:textColor="@color/mission_canvas"
                         android:textSize="11sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/missionTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
                         android:text="@string/mission_title"
                         android:textColor="@color/mission_text_primary"
                         android:textSize="24sp"
@@ -99,7 +99,8 @@
                         android:layout_marginTop="4dp"
                         android:text="@string/mission_subtitle_loading"
                         android:textColor="@color/mission_text_secondary"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <TextView
@@ -114,7 +115,8 @@
                     android:text="@string/mission_chip_edge"
                     android:textColor="@color/mission_text_primary"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -122,7 +124,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/targetsMetricCard"
@@ -259,7 +262,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:visibility="gone">
 
                 <TextView
                     android:id="@+id/focusStateChip"
@@ -313,7 +317,8 @@
                 android:text="@string/metric_confidence_idle"
                 android:textColor="@color/mission_cyan"
                 android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/focusDetail"
@@ -322,7 +327,8 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/focus_detail_idle"
                 android:textColor="@color/mission_text_secondary"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -347,74 +353,28 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/modeToggleButton"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_marginBottom="10dp"
+                android:text="@string/mode_server_scan"
+                android:textAllCaps="false"
+                android:textColor="@color/mission_canvas"
+                app:backgroundTint="@color/mission_cyan"
+                app:cornerRadius="18dp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/actionConfirmLed"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_confirm_led"
-                    android:textAllCaps="false"
-                    android:textColor="@color/mission_canvas"
-                    app:backgroundTint="@color/mission_green"
-                    app:cornerRadius="18dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/actionCaptureOcr"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_capture_ocr"
-                    android:textAllCaps="false"
-                    android:textColor="@color/mission_text_primary"
-                    app:backgroundTint="@color/mission_panel"
-                    app:cornerRadius="18dp"
-                    app:strokeColor="@color/mission_outline"
-                    app:strokeWidth="1dp" />
-            </LinearLayout>
-
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nextCableButton"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/actionFlagCable"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_flag_cable"
-                    android:textAllCaps="false"
-                    android:textColor="@color/mission_text_primary"
-                    app:backgroundTint="@color/mission_panel"
-                    app:cornerRadius="18dp"
-                    app:strokeColor="@color/mission_outline"
-                    app:strokeWidth="1dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/actionSaveLog"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/action_save_log"
-                    android:textAllCaps="false"
-                    android:textColor="@color/mission_canvas"
-                    app:backgroundTint="@color/mission_cyan"
-                    app:cornerRadius="18dp" />
-            </LinearLayout>
+                android:text="@string/action_next_cable"
+                android:textAllCaps="false"
+                android:textColor="@color/mission_canvas"
+                app:backgroundTint="@color/mission_green"
+                app:cornerRadius="18dp" />
 
             <TextView
                 android:id="@+id/statusText"
@@ -424,7 +384,8 @@
                 android:gravity="center"
                 android:text="@string/status_booting"
                 android:textColor="@color/mission_text_secondary"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

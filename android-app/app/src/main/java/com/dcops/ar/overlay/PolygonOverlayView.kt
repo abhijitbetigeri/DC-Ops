@@ -7,11 +7,22 @@ import android.graphics.CornerPathEffect
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PointF
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import com.dcops.ar.inference.DetectionResult
 import com.dcops.ar.ui.DetectionMissionStyle
 import com.dcops.ar.ui.DetectionUrgency
+import kotlin.math.sin
+
+data class CableMatchVisualization(
+    val cableDetection: DetectionResult?,
+    val portDetection: DetectionResult?,
+    val cableLabel: String,
+    val portLabel: String,
+    val activeColor: Int
+)
 
 /**
  * Custom [View] that draws detection polygons on top of the live camera preview.
@@ -31,6 +42,7 @@ class PolygonOverlayView @JvmOverloads constructor(
 
     private var detections: List<DetectionResult> = emptyList()
     private var focusDetection: DetectionResult? = null
+    private var cableMatchVisualization: CableMatchVisualization? = null
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -43,25 +55,28 @@ class PolygonOverlayView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 34f
-        isFakeBoldText = true
-        setShadowLayer(4f, 1f, 1f, Color.BLACK)
+    private val matchPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 9f
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        setShadowLayer(14f, 0f, 0f, Color.BLACK)
     }
 
-    private val textBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#AA000000")
-        style = Paint.Style.FILL
+    private val pulsePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 7f
     }
 
     /** Update detections and trigger a redraw.  Call on the main thread. */
     fun updateDetections(
         newDetections: List<DetectionResult>,
-        focus: DetectionResult? = null
+        focus: DetectionResult? = null,
+        cableMatch: CableMatchVisualization? = null
     ) {
         detections = newDetections
         focusDetection = focus
+        cableMatchVisualization = cableMatch
         invalidate()
     }
 
@@ -107,29 +122,39 @@ class PolygonOverlayView @JvmOverloads constructor(
                 else -> CornerPathEffect(18f)
             }
             canvas.drawPath(path, strokePaint)
-
-            strokePaint.style = Paint.Style.FILL
-            for (p in det.polygon) {
-                canvas.drawCircle(p.x * w, p.y * h, if (isFocus) 7f else 5f, strokePaint)
-            }
-            strokePaint.style = Paint.Style.STROKE
-
-            val labelPoint = det.polygon.minByOrNull { it.y } ?: det.polygon[0]
-            val labelX = labelPoint.x * w
-            val labelY = labelPoint.y * h - 12f
-            val labelText = "${det.label.uppercase()}  ${(det.score * 100).toInt()}%"
-            val textWidth = textPaint.measureText(labelText)
-            val textHeight = textPaint.textSize
-
-            canvas.drawRect(
-                labelX - 6f,
-                labelY - textHeight,
-                labelX + textWidth + 6f,
-                labelY + 6f,
-                textBgPaint
-            )
-            canvas.drawText(labelText, labelX, labelY, textPaint)
         }
+
+        drawCableMatch(canvas, w, h)
+    }
+
+    private fun drawCableMatch(canvas: Canvas, width: Float, height: Float) {
+        val match = cableMatchVisualization ?: return
+        val port = match.portDetection ?: return
+        val portCenter = centerOf(port, width, height) ?: return
+        val pulse = ((sin(SystemClock.uptimeMillis() / 180.0) + 1.0) / 2.0).toFloat()
+        val pulseRadius = 30f + pulse * 22f
+
+        pulsePaint.color = match.activeColor
+        pulsePaint.alpha = 155 + (pulse * 85f).toInt()
+        canvas.drawCircle(portCenter.x, portCenter.y, pulseRadius, pulsePaint)
+        canvas.drawCircle(portCenter.x, portCenter.y, pulseRadius + 18f, pulsePaint)
+
+        val cableCenter = match.cableDetection?.let { centerOf(it, width, height) } ?: return
+        matchPaint.color = match.activeColor
+        matchPaint.alpha = 230
+        canvas.drawLine(cableCenter.x, cableCenter.y, portCenter.x, portCenter.y, matchPaint)
+
+        fillPaint.color = match.activeColor
+        fillPaint.alpha = 210
+        canvas.drawCircle(cableCenter.x, cableCenter.y, 13f, fillPaint)
+        canvas.drawCircle(portCenter.x, portCenter.y, 13f, fillPaint)
+    }
+
+    private fun centerOf(detection: DetectionResult, width: Float, height: Float): PointF? {
+        if (detection.polygon.isEmpty()) return null
+        val centerX = detection.polygon.map { it.x }.average().toFloat() * width
+        val centerY = detection.polygon.map { it.y }.average().toFloat() * height
+        return PointF(centerX, centerY)
     }
 
     companion object {

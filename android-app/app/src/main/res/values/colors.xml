@@ -1,10 +1,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="mission_canvas">#FF05070B</color>
-    <color name="mission_panel">#CC101723</color>
-    <color name="mission_panel_strong">#E61A2432</color>
-    <color name="mission_outline">#3349687A</color>
+    <color name="mission_canvas">#FF0B1724</color>
+    <color name="mission_panel">#FF13263A</color>
+    <color name="mission_panel_strong">#FF1D344D</color>
+    <color name="mission_outline">#FF6EA8C7</color>
     <color name="mission_text_primary">#FFF5F7FA</color>
     <color name="mission_text_secondary">#FF9AB0C2</color>
     <color name="mission_scrim_top">#B30A1018</color>

@@ -1,10 +1,17 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="overlay_green">#FF00E676</color>
-    <color name="overlay_amber">#FFFFC107</color>
-    <color name="overlay_red">#FFFF1744</color>
-    <color name="overlay_blue">#FF2979FF</color>
-    <color name="overlay_fill">#3300E676</color>
-    <color name="status_bg">#AA000000</color>
+    <color name="mission_canvas">#FF0B1724</color>
+    <color name="mission_panel">#FF13263A</color>
+    <color name="mission_panel_strong">#FF1D344D</color>
+    <color name="mission_outline">#FF6EA8C7</color>
+    <color name="mission_text_primary">#FFF5F7FA</color>
+    <color name="mission_text_secondary">#FF9AB0C2</color>
+    <color name="mission_scrim_top">#B30A1018</color>
+    <color name="mission_scrim_bottom">#D90A1018</color>
+    <color name="mission_green">#FF2BE38A</color>
+    <color name="mission_amber">#FFFFB020</color>
+    <color name="mission_red">#FFFF5A5F</color>
+    <color name="mission_cyan">#FF62D4FF</color>
+    <color name="mission_chip">#FF223244</color>
 </resources>

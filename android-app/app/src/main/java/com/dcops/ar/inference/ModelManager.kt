@@ -8,9 +8,6 @@ import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.YuvImage
 import androidx.camera.core.ImageProxy
-import org.pytorch.executorch.EValue
-import org.pytorch.executorch.Module
-import org.pytorch.executorch.Tensor
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -35,7 +32,7 @@ class ModelManager {
         )
     }
 
-    private var module: Module? = null
+    private var module: Any? = null
     private var isReady = false
     // ExecuTorch Tensor.fromBlob requires a DIRECT buffer (not FloatBuffer.allocate, which is heap).
     private val inputBuffer = ByteBuffer
@@ -47,7 +44,7 @@ class ModelManager {
         Thread {
             try {
                 val modelPath = assetFilePath(context, MODEL_FILENAME)
-                module = Module.load(modelPath)
+                module = loadExecuTorchModule(modelPath)
                 isReady = true
                 onReady(true)
             } catch (e: Exception) {
@@ -59,28 +56,34 @@ class ModelManager {
     }
 
     fun processFrame(imageProxy: ImageProxy, onResult: (List<DetectionResult>) -> Unit) {
-        if (!isReady || module == null) {
+        val loadedModule = module ?: run {
             imageProxy.close()
+            onResult(emptyList())
+            return
+        }
+        if (!isReady) {
+            imageProxy.close()
+            onResult(emptyList())
             return
         }
 
         try {
             val bitmap = imageProxyToBitmap(imageProxy)
             val scaled = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
-            val inputTensor = bitmapToTensor(scaled)
+            val inputTensor = bitmapToEValue(scaled)
 
-            val outputs = module!!.forward(inputTensor)
+            val outputs = runModuleForward(loadedModule, inputTensor)
             val results = parseOutput(outputs)
-
-            imageProxy.close()
             onResult(results)
         } catch (e: Exception) {
-            imageProxy.close()
+            e.printStackTrace()
             onResult(emptyList())
+        } finally {
+            imageProxy.close()
         }
     }
 
-    private fun bitmapToTensor(bitmap: Bitmap): EValue {
+    private fun bitmapToEValue(bitmap: Bitmap): Any {
         inputBuffer.rewind()
         val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
         bitmap.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
@@ -91,15 +94,16 @@ class ModelManager {
 
         inputBuffer.rewind()
         val shape = longArrayOf(1, 3, INPUT_SIZE.toLong(), INPUT_SIZE.toLong())
-        return EValue.from(Tensor.fromBlob(inputBuffer, shape))
+        val tensor = createTensorFromBlob(inputBuffer, shape)
+        return wrapTensorInEValue(tensor)
     }
 
-    private fun parseOutput(outputs: Array<EValue>): List<DetectionResult> {
+    private fun parseOutput(outputs: Array<*>): List<DetectionResult> {
         if (outputs.isEmpty()) return emptyList()
 
-        val detTensor = outputs[0].toTensor()
-        val data = detTensor.dataAsFloatArray
-        val shape = detTensor.shape()
+        val detTensor = toTensor(outputs[0] ?: return emptyList())
+        val data = tensorDataAsFloatArray(detTensor)
+        val shape = tensorShape(detTensor)
 
         val numFeatures = shape[1].toInt()
         val numAnchors = shape[2].toInt()
@@ -111,10 +115,11 @@ class ModelManager {
         var maskH = 0
         var maskW = 0
         if (hasMasks) {
-            val mt = outputs[1].toTensor()
-            maskProtos = mt.dataAsFloatArray
-            maskH = mt.shape()[2].toInt()
-            maskW = mt.shape()[3].toInt()
+            val mt = toTensor(outputs[1] ?: return emptyList())
+            maskProtos = tensorDataAsFloatArray(mt)
+            val maskShape = tensorShape(mt)
+            maskH = maskShape[2].toInt()
+            maskW = maskShape[3].toInt()
         }
 
         // Collect raw detections above confidence threshold
@@ -272,13 +277,20 @@ class ModelManager {
      * on-device pipeline on a known-good test image.
      */
     fun processTestAsset(context: Context, assetName: String, onResult: (List<DetectionResult>) -> Unit) {
-        if (!isReady || module == null) { onResult(emptyList()); return }
+        val loadedModule = module ?: run {
+            onResult(emptyList())
+            return
+        }
+        if (!isReady) {
+            onResult(emptyList())
+            return
+        }
         Thread {
             try {
                 val bmp = context.assets.open(assetName).use { BitmapFactory.decodeStream(it) }
                 val scaled = Bitmap.createScaledBitmap(bmp, INPUT_SIZE, INPUT_SIZE, true)
-                val inputTensor = bitmapToTensor(scaled)
-                val outputs = module!!.forward(inputTensor)
+                val inputTensor = bitmapToEValue(scaled)
+                val outputs = runModuleForward(loadedModule, inputTensor)
                 onResult(parseOutput(outputs))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -288,8 +300,74 @@ class ModelManager {
     }
 
     fun shutdown() {
-        module?.destroy()
+        module?.let { loadedModule ->
+            val destroyMethod = loadedModule.javaClass.methods.firstOrNull {
+                it.name == "destroy" && it.parameterTypes.isEmpty()
+            }
+            destroyMethod?.invoke(loadedModule)
+        }
         module = null
         isReady = false
+    }
+
+    private fun loadExecuTorchModule(modelPath: String): Any {
+        val moduleClass = Class.forName("org.pytorch.executorch.Module")
+        val loadMethod = moduleClass.getMethod("load", String::class.java)
+        return requireNotNull(loadMethod.invoke(null, modelPath)) {
+            "ExecuTorch Module.load returned null"
+        }
+    }
+
+    private fun createTensorFromBlob(buffer: FloatBuffer, shape: LongArray): Any {
+        val tensorClass = Class.forName("org.pytorch.executorch.Tensor")
+        val fromBlobMethod = tensorClass.getMethod("fromBlob", FloatBuffer::class.java, LongArray::class.java)
+        return requireNotNull(fromBlobMethod.invoke(null, buffer, shape)) {
+            "ExecuTorch Tensor.fromBlob returned null"
+        }
+    }
+
+    private fun wrapTensorInEValue(tensor: Any): Any {
+        val eValueClass = Class.forName("org.pytorch.executorch.EValue")
+        val fromMethod = eValueClass.methods.firstOrNull {
+            it.name == "from" && it.parameterTypes.size == 1
+        } ?: error("ExecuTorch EValue.from(Tensor) not found")
+        return requireNotNull(fromMethod.invoke(null, tensor)) {
+            "ExecuTorch EValue.from returned null"
+        }
+    }
+
+    private fun runModuleForward(loadedModule: Any, input: Any): Array<*> {
+        val forwardMethod = loadedModule.javaClass.methods.firstOrNull {
+            it.name == "forward" && it.parameterTypes.size == 1
+        } ?: error("ExecuTorch Module.forward(EValue) not found")
+        val output = forwardMethod.invoke(loadedModule, input)
+        return output as? Array<*> ?: error("ExecuTorch Module.forward returned unexpected value")
+    }
+
+    private fun toTensor(value: Any): Any {
+        val toTensorMethod = value.javaClass.methods.firstOrNull {
+            it.name == "toTensor" && it.parameterTypes.isEmpty()
+        } ?: error("ExecuTorch EValue.toTensor() not found")
+        return requireNotNull(toTensorMethod.invoke(value)) {
+            "ExecuTorch EValue.toTensor returned null"
+        }
+    }
+
+    private fun tensorDataAsFloatArray(tensor: Any): FloatArray {
+        val dataMethod = tensor.javaClass.methods.firstOrNull {
+            it.name == "getDataAsFloatArray" && it.parameterTypes.isEmpty()
+        } ?: error("ExecuTorch Tensor.getDataAsFloatArray() not found")
+        return dataMethod.invoke(tensor) as? FloatArray
+            ?: error("ExecuTorch Tensor data was not FloatArray")
+    }
+
+    private fun tensorShape(tensor: Any): LongArray {
+        val shapeMethod = tensor.javaClass.methods.firstOrNull {
+            it.name == "shape" && it.parameterTypes.isEmpty()
+        } ?: tensor.javaClass.methods.firstOrNull {
+            it.name == "getShape" && it.parameterTypes.isEmpty()
+        } ?: error("ExecuTorch Tensor shape accessor not found")
+        return shapeMethod.invoke(tensor) as? LongArray
+            ?: error("ExecuTorch Tensor shape was not LongArray")
     }
 }

@@ -55,13 +55,15 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // ExecuTorch runtime (place executorch.aar in app/libs/)
-    implementation(files("libs/executorch.aar"))
-    // ExecuTorch's Module loads its native lib via Facebook SoLoader/NativeLoader,
-    // which is NOT bundled in the AAR and must be provided explicitly.
-    implementation("com.facebook.soloader:nativeloader:0.10.5")
-    // libexecutorch.so dlopen-depends on libfbjni.so, shipped by the fbjni artifact.
-    implementation("com.facebook.fbjni:fbjni:0.5.1")
+    // ExecuTorch runtime (optional at compile time, required for on-device inference)
+    val executorchAar = file("libs/executorch.aar")
+    if (executorchAar.exists()) {
+        runtimeOnly(files(executorchAar))
+    }
+    // ExecuTorch loads native dependencies at runtime; package them even though
+    // ModelManager reflects over the ExecuTorch classes at compile time.
+    runtimeOnly("com.facebook.soloader:nativeloader:0.10.5")
+    runtimeOnly("com.facebook.fbjni:fbjni:0.5.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

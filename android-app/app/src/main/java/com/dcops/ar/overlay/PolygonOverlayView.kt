@@ -3,13 +3,15 @@ package com.dcops.ar.overlay
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.CornerPathEffect
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PointF
 import android.util.AttributeSet
 import android.view.View
 import com.dcops.ar.inference.DetectionResult
-import com.dcops.ar.inference.ModelManager
+import com.dcops.ar.ui.DetectionMissionStyle
+import com.dcops.ar.ui.DetectionUrgency
 
 /**
  * Custom [View] that draws detection polygons on top of the live camera preview.
@@ -28,21 +30,22 @@ class PolygonOverlayView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var detections: List<DetectionResult> = emptyList()
+    private var focusDetection: DetectionResult? = null
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 4f
         isAntiAlias = true
+        pathEffect = CornerPathEffect(18f)
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        alpha = 60
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 36f
+        textSize = 34f
         isFakeBoldText = true
         setShadowLayer(4f, 1f, 1f, Color.BLACK)
     }
@@ -53,8 +56,12 @@ class PolygonOverlayView @JvmOverloads constructor(
     }
 
     /** Update detections and trigger a redraw.  Call on the main thread. */
-    fun updateDetections(newDetections: List<DetectionResult>) {
+    fun updateDetections(
+        newDetections: List<DetectionResult>,
+        focus: DetectionResult? = null
+    ) {
         detections = newDetections
+        focusDetection = focus
         invalidate()
     }
 
@@ -68,9 +75,11 @@ class PolygonOverlayView @JvmOverloads constructor(
         for (det in detections) {
             if (det.polygon.isEmpty()) continue
 
-            val color = colorForClass(det.classId)
+            val urgency = DetectionMissionStyle.urgencyFor(det)
+            val color = colorFor(det, urgency)
+            val isFocus = det == focusDetection
+            val isLowConfidence = det.score < 0.60f
 
-            // Build the polygon path in pixel coordinates
             val path = Path()
             val first = det.polygon[0]
             path.moveTo(first.x * w, first.y * h)
@@ -79,26 +88,36 @@ class PolygonOverlayView @JvmOverloads constructor(
             }
             path.close()
 
-            // Fill (semi-transparent)
             fillPaint.color = color
+            fillPaint.alpha = when {
+                isFocus -> 76
+                urgency == DetectionUrgency.CRITICAL -> 64
+                else -> 42
+            }
             canvas.drawPath(path, fillPaint)
 
-            // Stroke
             strokePaint.color = color
+            strokePaint.strokeWidth = if (isFocus) 8f else 4f
+            strokePaint.pathEffect = when {
+                isFocus -> CornerPathEffect(24f)
+                isLowConfidence || urgency == DetectionUrgency.REVIEW -> DashPathEffect(
+                    floatArrayOf(18f, 14f),
+                    0f
+                )
+                else -> CornerPathEffect(18f)
+            }
             canvas.drawPath(path, strokePaint)
 
-            // Draw vertices
             strokePaint.style = Paint.Style.FILL
             for (p in det.polygon) {
-                canvas.drawCircle(p.x * w, p.y * h, 5f, strokePaint)
+                canvas.drawCircle(p.x * w, p.y * h, if (isFocus) 7f else 5f, strokePaint)
             }
             strokePaint.style = Paint.Style.STROKE
 
-            // Draw label text at the top-most vertex
             val labelPoint = det.polygon.minByOrNull { it.y } ?: det.polygon[0]
             val labelX = labelPoint.x * w
             val labelY = labelPoint.y * h - 12f
-            val labelText = "${det.label}  ${(det.score * 100).toInt()}%"
+            val labelText = "${det.label.uppercase()}  ${(det.score * 100).toInt()}%"
             val textWidth = textPaint.measureText(labelText)
             val textHeight = textPaint.textSize
 
@@ -114,29 +133,19 @@ class PolygonOverlayView @JvmOverloads constructor(
     }
 
     companion object {
-        // One distinct color per DC class for visual separation
-        private val CLASS_COLORS = intArrayOf(
-            Color.parseColor("#4CAF50"),  //  0 server rack      — green
-            Color.parseColor("#FF9800"),  //  1 compute tray     — orange
-            Color.parseColor("#9C27B0"),  //  2 NVLink switch    — purple
-            Color.parseColor("#2196F3"),  //  3 network switch   — blue
-            Color.parseColor("#F44336"),  //  4 power shelf      — red
-            Color.parseColor("#00BCD4"),  //  5 cable            — cyan
-            Color.parseColor("#FFEB3B"),  //  6 network port     — yellow
-            Color.parseColor("#00E676"),  //  7 LED indicator    — bright green
-            Color.parseColor("#E040FB"),  //  8 label            — magenta
-            Color.parseColor("#795548"),  //  9 fan              — brown
-            Color.parseColor("#03A9F4"),  // 10 cooling manifold — light blue
-            Color.parseColor("#FF5722"),  // 11 cable cartridge  — deep orange
-            Color.parseColor("#FFC107"),  // 12 power connector  — amber
-            Color.parseColor("#8BC34A"),  // 13 drive bay        — light green
-            Color.parseColor("#607D8B"),  // 14 management port  — blue grey
-            Color.parseColor("#FF1744"),  // 15 DPU              — red accent
-        )
+        private const val HEALTHY_COLOR = "#2BE38A"
+        private const val REVIEW_COLOR = "#FFB020"
+        private const val CRITICAL_COLOR = "#FF5A5F"
+        private const val FALLBACK_COLOR = "#62D4FF"
     }
 
-    private fun colorForClass(classId: Int): Int {
-        if (classId in CLASS_COLORS.indices) return CLASS_COLORS[classId]
-        return Color.WHITE
+    private fun colorFor(det: DetectionResult, urgency: DetectionUrgency): Int {
+        return when (urgency) {
+            DetectionUrgency.HEALTHY -> {
+                if (det.classId == 8) Color.parseColor(FALLBACK_COLOR) else Color.parseColor(HEALTHY_COLOR)
+            }
+            DetectionUrgency.REVIEW -> Color.parseColor(REVIEW_COLOR)
+            DetectionUrgency.CRITICAL -> Color.parseColor(CRITICAL_COLOR)
+        }
     }
 }

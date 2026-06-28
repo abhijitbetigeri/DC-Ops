@@ -85,12 +85,17 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 ```
 
 ### Model Export
-```bash
-# Export YOLOv8n for Snapdragon NPU
-python models/export/export_yolo.py --soc_model SM8750 --compile_only
 
-# Export OCR model
-python models/export/export_ocr.py --soc_model SM8750 --compile_only
+> ⚠️ **Do not do a naive full-model export.** The YOLOv8-seg head won't lower to QNN and the
+> export silently falls back to a **CPU build** (looks correct, never touches the NPU). You must
+> export the **backbone only**. See **[`MODEL_BUILD_GUIDE.md`](MODEL_BUILD_GUIDE.md)** for the
+> verified, step-by-step recipe (and the size / `QnnBackend` check that tells a good build from a
+> bad one).
+
+```bash
+source scripts/qnn/env.sh
+MODEL_PT=<your.pt> OUT_PTE_BASE=<out> python scripts/qnn/export_yolo_backbone_qnn.py
+# then VERIFY: ~3.8 MB and `strings <pte> | grep -c QnnBackend` >= 1  (13 MB / 0 = CPU build = wrong)
 ```
 
 ## Demo Plan (5 min)

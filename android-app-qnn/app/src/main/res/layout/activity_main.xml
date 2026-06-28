@@ -13,11 +13,69 @@
         android:layout_height="match_parent"
         app:scaleType="fillCenter" />
 
+    <!-- Test-image layer (shown in test mode so polygons land on the actual image, not black) -->
+    <ImageView
+        android:id="@+id/testImageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:visibility="gone"
+        android:contentDescription="@null" />
+
     <!-- Polygon overlay drawn on top of camera feed -->
     <com.dcops.ar.overlay.PolygonOverlayView
         android:id="@+id/overlayView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <!-- Confidence-threshold slider (on top of the overlay so it receives touches) -->
+    <LinearLayout
+        android:id="@+id/thresholdBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#99000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingTop="48dp"
+        android:paddingBottom="10dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/thresholdLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Min confidence: 50%"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <SeekBar
+            android:id="@+id/thresholdSeek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="95"
+            android:progress="50" />
+
+        <TextView
+            android:id="@+id/floorLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Server floor: 10%"
+            android:textColor="@color/white"
+            android:textSize="13sp" />
+
+        <SeekBar
+            android:id="@+id/floorSeek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="10" />
+    </LinearLayout>
 
     <!-- Status bar at the bottom -->
     <TextView

@@ -28,13 +28,17 @@ source scripts/setup_env.sh
 
 ## Build
 
-```bash
-# Export models
-python models/export/export_yolo.py --soc_model SM8750
-python models/export/export_ocr.py --soc_model SM8750
+> ⚠️ Building a QNN `.pte` that actually runs on the NPU: see **`MODEL_BUILD_GUIDE.md`**.
+> A naive full-model export silently produces a **CPU build** — you must export the backbone only,
+> then verify (~3.8 MB, `strings <pte> | grep -c QnnBackend` >= 1). Full postmortem in
+> `EXECUTORCH_QNN_NPU_NOTES.md`.
 
-# Build Android runtime
-cd executorch && ./scripts/build_android_library.sh
+```bash
+source scripts/qnn/env.sh
+# Build the model (backbone-only QNN export):
+MODEL_PT=<your.pt> OUT_PTE_BASE=<out> python scripts/qnn/export_yolo_backbone_qnn.py
+# Deploy a model bundle to the device (no app/server rebuild needed):
+scripts/qnn/swap_model.sh models/<name>
 ```
 
 ## Target Device

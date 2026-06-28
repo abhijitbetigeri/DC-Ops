@@ -1,0 +1,12 @@
+{
+  "type": "yolov8_seg",
+  "input_size": 640,
+  "reg_max": 16,
+  "source": "dc_ops_yolov8n_seg_v3.pt (HF datasets/abhijitbetigeri/dc-ops-dataset), QNN backbone export w8a16, 200-img calib",
+  "labels": [
+    "server rack", "compute tray", "NVLink switch tray", "network switch",
+    "power shelf", "cable", "network port", "LED indicator",
+    "label", "fan", "cooling manifold", "cable cartridge",
+    "power connector", "drive bay", "management port", "DPU"
+  ]
+}

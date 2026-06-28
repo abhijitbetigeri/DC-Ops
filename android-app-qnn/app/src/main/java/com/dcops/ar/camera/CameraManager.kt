@@ -51,6 +51,9 @@ class CameraManager(
             val imageAnalysis = ImageAnalysis.Builder()
                 .setTargetResolution(TARGET_RESOLUTION)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                // Deliver frames as RGBA_8888 (single plane) so we skip the error-prone
+                // YUV_420_888 -> NV21 packing entirely; the bitmap is built directly.
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor) { imageProxy ->

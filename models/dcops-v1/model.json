@@ -1,0 +1,23 @@
+{
+  "type": "yolov8_seg",
+  "input_size": 640,
+  "reg_max": 16,
+  "labels": [
+    "server rack",
+    "compute tray",
+    "NVLink switch tray",
+    "network switch",
+    "power shelf",
+    "cable",
+    "network port",
+    "LED indicator",
+    "label",
+    "fan",
+    "cooling manifold",
+    "cable cartridge",
+    "power connector",
+    "drive bay",
+    "management port",
+    "DPU"
+  ]
+}

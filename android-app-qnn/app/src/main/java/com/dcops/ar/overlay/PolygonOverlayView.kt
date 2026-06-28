@@ -29,6 +29,10 @@ class PolygonOverlayView @JvmOverloads constructor(
 
     private var detections: List<DetectionResult> = emptyList()
 
+    /** Top safe-area inset (status bar height, px). Set by the activity from window insets. */
+    var topInset: Float = 0f
+        set(value) { field = value; invalidate() }
+
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 4f
@@ -79,12 +83,16 @@ class PolygonOverlayView @JvmOverloads constructor(
             }
             path.close()
 
-            // Fill (semi-transparent)
+            // Fill (translucent) — set alpha AFTER color, since setting color resets alpha to
+            // the opaque value baked into CLASS_COLORS. ~90/255 lets the image and overlapping
+            // detections show through.
             fillPaint.color = color
+            fillPaint.alpha = 90
             canvas.drawPath(path, fillPaint)
 
-            // Stroke
+            // Stroke (mostly opaque so the outline stays readable over the fill)
             strokePaint.color = color
+            strokePaint.alpha = 220
             canvas.drawPath(path, strokePaint)
 
             // Draw vertices
@@ -94,22 +102,28 @@ class PolygonOverlayView @JvmOverloads constructor(
             }
             strokePaint.style = Paint.Style.STROKE
 
-            // Draw label text at the top-most vertex
+            // Draw label text near the top-most vertex, but CLAMP it so the box is always
+            // fully on-screen — even when the polygon fills (or exceeds) the whole view.
             val labelPoint = det.polygon.minByOrNull { it.y } ?: det.polygon[0]
-            val labelX = labelPoint.x * w
-            val labelY = labelPoint.y * h - 12f
             val labelText = "${det.label}  ${(det.score * 100).toInt()}%"
             val textWidth = textPaint.measureText(labelText)
             val textHeight = textPaint.textSize
+            val margin = 8f
+            val topSafe = topInset + textHeight + 8f   // keep clear of the status bar / screen top
+
+            val labelX = (labelPoint.x * w).coerceIn(margin, (w - textWidth - margin).coerceAtLeast(margin))
+            var baseline = labelPoint.y * h - 12f
+            if (baseline < topSafe) baseline = topSafe                 // pushed below top edge
+            if (baseline + 6f > h - margin) baseline = h - margin - 6f // not under bottom edge
 
             canvas.drawRect(
                 labelX - 6f,
-                labelY - textHeight,
+                baseline - textHeight,
                 labelX + textWidth + 6f,
-                labelY + 6f,
+                baseline + 6f,
                 textBgPaint
             )
-            canvas.drawText(labelText, labelX, labelY, textPaint)
+            canvas.drawText(labelText, labelX, baseline, textPaint)
         }
     }
 

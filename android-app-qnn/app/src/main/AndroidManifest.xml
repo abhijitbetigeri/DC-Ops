@@ -7,6 +7,8 @@
         android:required="true" />
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Loopback TCP to the shell-context NPU bridge server (127.0.0.1:8765) -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"

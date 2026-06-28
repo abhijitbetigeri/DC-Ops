@@ -241,6 +241,120 @@ static std::vector<Det> decode_yolov8_seg(const ModelCfg& cfg,
   return kept;
 }
 
+// ---- RetinaNet (torchvision ResNet50-FPN) decode ---------------------------
+// APPEND-ONLY addition. Mirrors the torchvision RetinaNet postprocess that the
+// .pte deliberately omits: the exported graph emits ONLY the 10 raw conv-head
+// tensors (5 cls @ C=153, 5 reg @ C=36), so anchor generation + box-regression
+// decode + per-class NMS are done here. Boxes are emitted as 4-point normalized
+// rectangle polygons via the shared mask_poly() (which, with cfg.num_mask==0,
+// falls back to bbox_poly() without ever dereferencing the proto pointer) -- no
+// mask hull. Existing constants (CONF_FLOOR/IOU_THRESH/MAX_DET) and helpers
+// (sigmoidf/iou) are reused unchanged.
+static const int   RETINA_NUM_ANCHORS = 9;    // 3 sizes x 3 aspect ratios per cell
+static const int   RETINA_CLS_K       = 17;   // class logits per anchor (153 / 9)
+static const int   RETINA_REG_K       = 4;    // dx,dy,dw,dh per anchor (36 / 9)
+static const int   RETINA_CLS_CH      = 153;  // RETINA_NUM_ANCHORS * RETINA_CLS_K
+static const int   RETINA_REG_CH      = 36;   // RETINA_NUM_ANCHORS * RETINA_REG_K
+static const int   RETINA_NUM_LEVELS  = 5;    // FPN P3..P7
+static const float RETINA_BBOX_CLIP   = 4.135166556742356f;  // log(1000/16)
+// AnchorGenerator base sizes (input-pixel units); aspect ratios applied per level.
+static const float RETINA_ASPECTS[3]  = {0.5f, 1.0f, 2.0f};
+static const float RETINA_SIZES[RETINA_NUM_LEVELS][3] = {
+    { 32.0f,  40.0f,  50.0f},   // P3  grid 80  stride 8
+    { 64.0f,  80.0f, 101.0f},   // P4  grid 40  stride 16
+    {128.0f, 161.0f, 203.0f},   // P5  grid 20  stride 32
+    {256.0f, 322.0f, 406.0f},   // P6  grid 10  stride 64
+    {512.0f, 645.0f, 812.0f}};  // P7  grid  5  stride 128
+static const int   RETINA_GRIDS[RETINA_NUM_LEVELS] = {80, 40, 20, 10, 5};
+
+static std::vector<Det> decode_retinanet(const ModelCfg& cfg,
+                                         std::vector<EValue>& outs, float conf_floor) {
+  // Locate the 5 cls (C==RETINA_CLS_CH) and 5 reg (C==RETINA_REG_CH) raw heads
+  // among the 4D outputs, keyed by grid size (output positions are NOT assumed).
+  std::unordered_map<int, const float*> cls_by_grid, reg_by_grid;
+  for (size_t i = 0; i < outs.size(); i++) {
+    auto tt = outs[i].toTensor();
+    if (tt.dim() != 4) continue;
+    int C = (int)tt.sizes()[1];
+    int g = (int)tt.sizes()[2];
+    if (C == RETINA_CLS_CH) cls_by_grid[g] = tt.const_data_ptr<float>();
+    else if (C == RETINA_REG_CH) reg_by_grid[g] = tt.const_data_ptr<float>();
+  }
+  std::vector<Det> dets;
+  for (int lvl = 0; lvl < RETINA_NUM_LEVELS; lvl++) {
+    int grid = RETINA_GRIDS[lvl];
+    auto cit = cls_by_grid.find(grid);
+    auto rit = reg_by_grid.find(grid);
+    if (cit == cls_by_grid.end() || rit == reg_by_grid.end()) continue;
+    const float* cls = cit->second;
+    const float* reg = rit->second;
+    const float stride = (float)cfg.input_h / grid;
+    const int hw = grid * grid;
+    // Per-cell anchor w/h: aspect OUTER, size INNER. h_ratio=sqrt(ar),
+    // w_ratio=1/h_ratio, w=w_ratio*size, h=h_ratio*size. Order matches the head
+    // channel unpack (anchor a = channel / K).
+    float aw[RETINA_NUM_ANCHORS], ah[RETINA_NUM_ANCHORS];
+    int ai = 0;
+    for (int r = 0; r < 3; r++) {
+      float h_ratio = sqrtf(RETINA_ASPECTS[r]);
+      float w_ratio = 1.0f / h_ratio;
+      for (int si = 0; si < 3; si++) {
+        float sz = RETINA_SIZES[lvl][si];
+        aw[ai] = w_ratio * sz;
+        ah[ai] = h_ratio * sz;
+        ai++;
+      }
+    }
+    for (int yy = 0; yy < grid; yy++) {
+      for (int xx = 0; xx < grid; xx++) {
+        int cell = yy * grid + xx;
+        float actr_x = xx * stride;  // RetinaNet centers: NO +0.5 (differs from YOLO)
+        float actr_y = yy * stride;
+        for (int a = 0; a < RETINA_NUM_ANCHORS; a++) {
+          int bestC = 1;  // class 0 is background (RetinaNet head is 1-indexed); skip it
+          float bestLogit = -1e30f;
+          for (int c = 1; c < RETINA_CLS_K; c++) {
+            float v = cls[(a * RETINA_CLS_K + c) * hw + cell];
+            if (v > bestLogit) { bestLogit = v; bestC = c; }
+          }
+          float score = sigmoidf(bestLogit);
+          if (score < conf_floor) continue;
+          float dx = reg[(a * RETINA_REG_K + 0) * hw + cell];
+          float dy = reg[(a * RETINA_REG_K + 1) * hw + cell];
+          float dw = reg[(a * RETINA_REG_K + 2) * hw + cell];
+          float dh = reg[(a * RETINA_REG_K + 3) * hw + cell];
+          if (dw > RETINA_BBOX_CLIP) dw = RETINA_BBOX_CLIP;  // det_utils clip before exp
+          if (dh > RETINA_BBOX_CLIP) dh = RETINA_BBOX_CLIP;
+          float pred_cx = dx * aw[a] + actr_x;
+          float pred_cy = dy * ah[a] + actr_y;
+          float pred_w = expf(dw) * aw[a];
+          float pred_h = expf(dh) * ah[a];
+          Det det;
+          det.cx = pred_cx;
+          det.cy = pred_cy;
+          det.w = pred_w;
+          det.h = pred_h;
+          det.cls = bestC - 1;  // map 1-indexed RetinaNet class -> 0-indexed DC class
+          det.score = score;
+          dets.push_back(std::move(det));  // coeff stays empty -> bbox_poly fallback
+        }
+      }
+    }
+  }
+  // Per-class greedy NMS (identical policy to decode_yolov8_seg).
+  std::sort(dets.begin(), dets.end(), [](const Det& a, const Det& b) { return a.score > b.score; });
+  std::vector<Det> kept;
+  for (auto& cand : dets) {
+    if ((int)kept.size() >= MAX_DET) break;
+    bool sup = false;
+    for (auto& k : kept) {
+      if (k.cls == cand.cls && iou(k, cand) > IOU_THRESH) { sup = true; break; }
+    }
+    if (!sup) kept.push_back(std::move(cand));
+  }
+  return kept;
+}
+
 static bool read_full(int fd, char* b, long n) {
   long g = 0;
   while (g < n) { ssize_t r = read(fd, b + g, n - g); if (r <= 0) return false; g += r; }
@@ -358,6 +472,10 @@ int main(int argc, char** argv) {
     //   proto : the unique 4D output with dim1 == M
     //   heads : the remaining 4D outputs (1, C, g, g)
     auto& outs = *r;
+    // Gate the YOLOv8-seg-specific shape derivation by type so RetinaNet (10 4D
+    // heads / 0 3D) doesn't hit the YOLO FATAL checks. Existing YOLO lines below
+    // are unchanged, only wrapped. RetinaNet derives its own cfg in the else-if.
+    if (cfg.type == "yolov8_seg") {
     std::vector<int> dim4;
     int n3d = 0;
     for (size_t i = 0; i < outs.size(); i++) {
@@ -425,6 +543,20 @@ int main(int argc, char** argv) {
     if ((int)cfg.labels.size() != cfg.num_classes) {
       fprintf(stderr, "WARNING: labels.size()=%zu != derived num_classes=%d (continuing)\n",
               cfg.labels.size(), cfg.num_classes);
+    }
+    } else if (cfg.type == "retinanet") {
+      // RetinaNet: boxes only, no masks. decode_retinanet scans `outs` itself
+      // (cls heads C==RETINA_CLS_CH, reg heads C==RETINA_REG_CH) and uses the
+      // RETINA_* anchor tables. Head is 1-indexed (class 0 = background), and
+      // decode emits 0-indexed DC classes, so the handshake exposes 16 labels.
+      cfg.num_classes = RETINA_CLS_K - 1;  // 16 DC classes (drop background)
+      if ((int)cfg.labels.size() != cfg.num_classes) {
+        fprintf(stderr, "WARNING: labels.size()=%zu != retinanet num_classes=%d (continuing)\n",
+                cfg.labels.size(), cfg.num_classes);
+      }
+    } else {
+      fprintf(stderr, "FATAL: unknown model type '%s'\n", cfg.type.c_str());
+      return 1;
     }
   }
 
@@ -515,6 +647,8 @@ int main(int argc, char** argv) {
         const float* mc = outs[cfg.mc_idx].toTensor().const_data_ptr<float>();
         proto = outs[cfg.proto_idx].toTensor().const_data_ptr<float>();
         kept = decode_yolov8_seg(cfg, ps, mc, conf_floor);
+      } else if (cfg.type == "retinanet") {
+        kept = decode_retinanet(cfg, outs, conf_floor);
       } else if (!unknown_type_logged) {
         fprintf(stderr, "WARNING: unknown model type '%s' -> serving empty detections\n",
                 cfg.type.c_str());

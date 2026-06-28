@@ -1,0 +1,11 @@
+{
+  "type": "retinanet",
+  "input_size": 640,
+  "source": "retinanet_dc_ops.pt (HF datasets/abhijitbetigeri/dc-ops-dataset), torchvision RetinaNet ResNet50-FPN, QNN backbone+heads export w8a16, ImageNet norm baked into the .pte wrapper; C++ anchor decode + per-class NMS in qnn_socket_server. Head is 1-indexed (class 0 = background); decode skips background and emits the 16 0-indexed DC classes (same taxonomy as YOLO). Boxes rendered as 4-point polygons.",
+  "labels": [
+    "server rack", "compute tray", "NVLink switch tray", "network switch",
+    "power shelf", "cable", "network port", "LED indicator",
+    "label", "fan", "cooling manifold", "cable cartridge",
+    "power connector", "drive bay", "management port", "DPU"
+  ]
+}

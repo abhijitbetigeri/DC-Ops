@@ -17,3 +17,7 @@ build/
 dist/
 .gradle/
 local.properties
+
+# QNN native libs + models (fetch from QNN SDK / re-export; see EXECUTORCH_QNN_NPU_NOTES.md)
+*.so
+.idea/

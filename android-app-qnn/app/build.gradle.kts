@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.dcops.ar"
+        applicationId = "com.dcops.ar.qnn"   // distinct id so the QNN variant coexists with the CPU app
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -38,6 +38,15 @@ android {
 
     buildFeatures {
         viewBinding = true
+    }
+
+    // Extract native libs to the filesystem so the Hexagon DSP/fastRPC can load the QNN
+    // HTP skel from ADSP_LIBRARY_PATH (default extractNativeLibs=false leaves them
+    // compressed in the APK, which the DSP can't read -> "Failed to load skel error 4000").
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 

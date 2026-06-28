@@ -14,6 +14,8 @@ import org.pytorch.executorch.Tensor
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 class ModelManager {
@@ -35,7 +37,11 @@ class ModelManager {
 
     private var module: Module? = null
     private var isReady = false
-    private val inputBuffer = FloatBuffer.allocate(3 * INPUT_SIZE * INPUT_SIZE)
+    // ExecuTorch Tensor.fromBlob requires a DIRECT buffer (not FloatBuffer.allocate, which is heap).
+    private val inputBuffer = ByteBuffer
+        .allocateDirect(3 * INPUT_SIZE * INPUT_SIZE * 4)
+        .order(ByteOrder.nativeOrder())
+        .asFloatBuffer()
 
     fun init(context: Context, onReady: (Boolean) -> Unit) {
         Thread {
@@ -258,6 +264,27 @@ class ModelManager {
             FileOutputStream(file).use { output -> input.copyTo(output) }
         }
         return file.absolutePath
+    }
+
+    /**
+     * Debug: run inference on a bundled asset image (instead of the camera),
+     * using the exact same forward + parseOutput path. Lets us validate the
+     * on-device pipeline on a known-good test image.
+     */
+    fun processTestAsset(context: Context, assetName: String, onResult: (List<DetectionResult>) -> Unit) {
+        if (!isReady || module == null) { onResult(emptyList()); return }
+        Thread {
+            try {
+                val bmp = context.assets.open(assetName).use { BitmapFactory.decodeStream(it) }
+                val scaled = Bitmap.createScaledBitmap(bmp, INPUT_SIZE, INPUT_SIZE, true)
+                val inputTensor = bitmapToTensor(scaled)
+                val outputs = module!!.forward(inputTensor)
+                onResult(parseOutput(outputs))
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(emptyList())
+            }
+        }.start()
     }
 
     fun shutdown() {

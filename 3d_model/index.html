@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vera Rubin NVL72 Rack Model</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="viewer-panel" aria-label="Three dimensional rack viewer">
+        <canvas id="rackCanvas"></canvas>
+        <div class="controls" aria-label="Viewer controls">
+          <button id="resetCamera" type="button">Reset view</button>
+          <button id="toggleCables" type="button">Hide cables</button>
+          <button id="toggleRotation" type="button">Start rotation</button>
+        </div>
+        <div class="legend" aria-label="Connector legend">
+          <span><i class="swatch osfp"></i>OSFP / 800G cages</span>
+          <span><i class="swatch rj45"></i>BMC Ethernet</span>
+          <span><i class="swatch usb"></i>USB-C service</span>
+          <span><i class="swatch e1s"></i>E1.S SSD slots</span>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

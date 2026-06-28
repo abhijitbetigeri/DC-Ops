@@ -44,28 +44,38 @@ slide2.addText("THE PROBLEM", {
   fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
 });
 
-const problems = [
-  { icon: "🔒", title: "Air-Gapped Environments", desc: "Data centers prohibit cloud connectivity in server rooms — no API calls possible" },
-  { icon: "🕐", title: "Slow Manual Inspection", desc: "Technicians walk aisles checking thousands of LEDs, ports, and cables by eye" },
-  { icon: "🔐", title: "Sensitive Infrastructure Data", desc: "Serial numbers, rack topology, and server status are classified information" },
-  { icon: "📶", title: "No Connectivity", desc: "Even connected DCs have dead zones between rack rows — WiFi is unreliable" },
+// Top stats row — scale of the problem
+const probStats = [
+  { val: "1000+", label: "Server racks built every week", size: 48, x: 2.16 },
+  { val: "~4000+", label: "Total weekly volume over the next few years", size: 44, x: 5.16 },
+  { val: "80%", label: "Of racks are installed incorrectly the first time they are built", size: 44, x: 8.16 },
 ];
+probStats.forEach((s) => {
+  slide2.addText(s.val, {
+    x: s.x, y: 1.85, w: 2.7, h: 1.0,
+    fontSize: s.size, fontFace: "Arial Black", color: ACCENT, bold: true, align: "center",
+  });
+  slide2.addText(s.label, {
+    x: s.x, y: 2.85, w: 2.7, h: 0.9,
+    fontSize: 14, fontFace: "Arial", color: TEXT_MUTED, align: "center", lineSpacingMultiple: 1.2,
+  });
+});
 
-problems.forEach((p, i) => {
-  const y = 1.5 + i * 1.2;
-  slide2.addShape(pres.ShapeType.roundRect, {
-    x: 0.8, y: y, w: 11.4, h: 1.0,
-    fill: { color: BG_CARD }, rectRadius: 0.1,
-  });
-  slide2.addText(p.icon, { x: 1.0, y: y + 0.1, w: 0.8, h: 0.8, fontSize: 28 });
-  slide2.addText(p.title, {
-    x: 1.9, y: y + 0.05, w: 9, h: 0.45,
-    fontSize: 18, fontFace: "Arial", color: TEXT_WHITE, bold: true,
-  });
-  slide2.addText(p.desc, {
-    x: 1.9, y: y + 0.5, w: 9, h: 0.4,
-    fontSize: 13, fontFace: "Arial", color: TEXT_MUTED,
-  });
+// Bottom: cable problem narrative + NVIDIA rack image
+slide2.addText("Cables in the wrong place", {
+  x: 0.8, y: 4.46, w: 5.0, h: 0.5,
+  fontSize: 20, fontFace: "Arial", color: TEXT_WHITE, bold: true,
+});
+slide2.addText(
+  "A rack is a dense mesh of cables linking trays, assembled at volume by labor crews constantly cross-referencing a paper assembly guide — slow and error-prone.",
+  {
+    x: 0.8, y: 5.0, w: 5.0, h: 2.0,
+    fontSize: 15, fontFace: "Arial", color: TEXT_LIGHT, lineSpacingMultiple: 1.4,
+  }
+);
+slide2.addImage({
+  path: "/Users/abhijitbetigeri/projects/DC-Ops/presentation/nvl72_rack.png",
+  x: 6.2, y: 4.0, w: 6.0, h: 3.0, sizing: { type: "contain", w: 6.0, h: 3.0 },
 });
 
 // ============ SLIDE 3: SOLUTION ============

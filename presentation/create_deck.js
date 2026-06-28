@@ -323,9 +323,14 @@ slide8.addText("MODEL PERFORMANCE", {
   fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
 });
 
+slide8.addText("Fine-tuned YOLOv8n-seg (Ultralytics), adapted for 16 data center component classes", {
+  x: 0.8, y: 1.05, w: 11.4, h: 0.4,
+  fontSize: 15, fontFace: "Arial", color: ACCENT3, italic: true, bold: true,
+});
+
 // Big stats
 const stats = [
-  { val: "0.749", label: "mAP50 (box)", sub: "YOLOv8n-seg v3" },
+  { val: "0.749", label: "mAP50 (box)", sub: "Fine-tuned YOLOv8n-seg" },
   { val: "0.85", label: "Final Loss", sub: "RetinaNet (moiré aug)" },
   { val: "6.4ms", label: "Inference", sub: "Per frame on T4 GPU" },
 ];
@@ -333,19 +338,19 @@ const stats = [
 stats.forEach((s, i) => {
   const x = 0.8 + i * 4.0;
   slide8.addShape(pres.ShapeType.roundRect, {
-    x: x, y: 1.3, w: 3.6, h: 1.8,
+    x: x, y: 1.6, w: 3.6, h: 1.8,
     fill: { color: BG_CARD }, rectRadius: 0.1,
   });
   slide8.addText(s.val, {
-    x: x, y: 1.4, w: 3.6, h: 0.9,
+    x: x, y: 1.7, w: 3.6, h: 0.9,
     fontSize: 44, fontFace: "Arial Black", color: ACCENT, bold: true, align: "center",
   });
   slide8.addText(s.label, {
-    x: x, y: 2.2, w: 3.6, h: 0.4,
+    x: x, y: 2.5, w: 3.6, h: 0.4,
     fontSize: 16, fontFace: "Arial", color: TEXT_WHITE, align: "center", bold: true,
   });
   slide8.addText(s.sub, {
-    x: x, y: 2.6, w: 3.6, h: 0.35,
+    x: x, y: 2.9, w: 3.6, h: 0.35,
     fontSize: 12, fontFace: "Arial", color: TEXT_MUTED, align: "center",
   });
 });
@@ -369,42 +374,6 @@ classes.forEach((c, i) => {
   slide8.addText(c[1], {
     x: x + 3.0, y: y, w: 1.5, h: 0.5,
     fontSize: 13, fontFace: "Consolas", color: ACCENT,
-  });
-});
-
-// ============ SLIDE 9: DEMO FLOW ============
-let slide9 = pres.addSlide();
-slide9.background = { color: BG_DARK };
-slide9.addText("LIVE DEMO", {
-  x: 0.8, y: 0.4, w: 11, h: 0.7,
-  fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
-});
-
-const demoSteps = [
-  { time: "0:00", action: "Point phone at server rack / mini PC", detail: "Real-time colored polygon overlays appear" },
-  { time: "1:00", action: "Tap detected component", detail: "RAG info panel: specs, troubleshooting, LED meanings" },
-  { time: "2:00", action: "Toggle CPU ↔ NPU", detail: "Live FPS/latency comparison on screen" },
-  { time: "3:00", action: "Enable airplane mode", detail: "Everything still works — fully offline" },
-  { time: "4:00", action: "3D rack explorer", detail: "Interactive NVL72 model with component details" },
-];
-
-demoSteps.forEach((d, i) => {
-  const y = 1.3 + i * 0.95;
-  slide9.addShape(pres.ShapeType.roundRect, {
-    x: 0.8, y: y, w: 1.2, h: 0.75,
-    fill: { color: ACCENT }, rectRadius: 0.1,
-  });
-  slide9.addText(d.time, {
-    x: 0.8, y: y, w: 1.2, h: 0.75,
-    fontSize: 16, fontFace: "Consolas", color: BG_DARK, align: "center", bold: true, valign: "middle",
-  });
-  slide9.addText(d.action, {
-    x: 2.2, y: y, w: 5.0, h: 0.45,
-    fontSize: 16, fontFace: "Arial", color: TEXT_WHITE, bold: true,
-  });
-  slide9.addText(d.detail, {
-    x: 2.2, y: y + 0.4, w: 9.0, h: 0.35,
-    fontSize: 12, fontFace: "Arial", color: TEXT_MUTED,
   });
 });
 
@@ -577,20 +546,21 @@ slide13.addShape(pres.ShapeType.rect, {
 
 // Links
 const links = [
-  ["GitHub", "github.com/abhijitbetigeri/DC-Ops"],
-  ["HuggingFace", "huggingface.co/datasets/abhijitbetigeri/dc-ops-dataset"],
-  ["Models", "RetinaNet QNN HTP (.pte) + YOLOv8n-seg (.pte) + RAG index"],
+  ["GitHub", "https://github.com/abhijitbetigeri/DC-Ops", "https://github.com/abhijitbetigeri/DC-Ops"],
+  ["Hugging Face", "https://huggingface.co/datasets/abhijitbetigeri/dc-ops-dataset", "https://huggingface.co/datasets/abhijitbetigeri/dc-ops-dataset"],
+  ["Models", "RetinaNet QNN HTP (.pte) · YOLOv8n-seg (.pte) · CLIP + FAISS RAG index", null],
 ];
 
 links.forEach((l, i) => {
-  const y = 2.3 + i * 0.6;
+  const y = 2.4 + i * 0.7;
   slide13.addText(l[0], {
     x: 0.8, y: y, w: 2.5, h: 0.5,
     fontSize: 16, fontFace: "Arial", color: ACCENT, bold: true,
   });
   slide13.addText(l[1], {
-    x: 3.3, y: y, w: 8.5, h: 0.5,
+    x: 3.3, y: y, w: 9.0, h: 0.5,
     fontSize: 14, fontFace: "Consolas", color: TEXT_LIGHT,
+    hyperlink: l[2] ? { url: l[2] } : undefined,
   });
 });
 

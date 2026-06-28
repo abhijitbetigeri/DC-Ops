@@ -123,5 +123,5 @@ out = os.environ.get("OUT_PTE_BASE", f"{ER}/dcops_qnn/retinanet_dc_ops_qnn")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 # w8a16 (16-bit activations) — same recommended HTP precision as YOLO; 8a8w collapsed YOLO scores
 # to 0, and RetinaNet's sigmoid class logits are similarly sensitive, so keep use_16a8w.
-build_executorch_binary(model=w, qnn_config=cfg, file_name=out, dataset=calib, quant_dtype=QuantDtype.use_16a8w)
+build_executorch_binary(model=w, qnn_config=cfg, file_name=out, dataset=calib, quant_dtype=QuantDtype.use_16a16w)
 print("WROTE", out + ".pte", os.path.getsize(out + ".pte"), "bytes")

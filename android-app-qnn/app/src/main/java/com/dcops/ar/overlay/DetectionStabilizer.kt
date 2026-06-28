@@ -39,10 +39,14 @@ class DetectionStabilizer {
         const val CENTROID_DIST = 0.10f
         // Weight on the newest score for the displayed EMA percentage.
         const val EMA_ALPHA = 0.5f
-        // High threshold to first reveal a track (hysteresis upper).
-        const val SHOW_SCORE = 0.25f
-        // Low threshold to drop a visible track (hysteresis lower).
-        const val HIDE_SCORE = 0.12f
+        // Visibility is gated UPSTREAM by ModelManager.confThreshold (the Min-confidence
+        // slider) in parseDetections, so detections reaching the stabilizer already passed
+        // the user's threshold. The stabilizer must NOT impose its own absolute score floor
+        // on top — that silently hid low-scoring models (e.g. RetinaNet, whose w8a16 scores
+        // peak ~0.26) on the LIVE path while test mode (which bypasses the stabilizer) showed
+        // them. Keep these at 0 so the stabilizer only adds temporal hold + MIN_HITS debounce.
+        const val SHOW_SCORE = 0.0f
+        const val HIDE_SCORE = 0.0f
         // Require this many matched frames before first showing a track.
         const val MIN_HITS = 2
         // Per-miss score decay so a vanished track eventually drops below HIDE_SCORE.

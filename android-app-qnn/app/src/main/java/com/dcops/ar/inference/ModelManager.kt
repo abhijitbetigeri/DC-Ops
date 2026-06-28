@@ -73,6 +73,18 @@ class ModelManager {
      */
     @Volatile var serverFloor = DEFAULT_SERVER_FLOOR
 
+    /**
+     * Which on-device NPU server port to talk to — the in-app model switcher.
+     * Two servers run (one model each); switching the port reconnects and the
+     * handshake re-reads that model's labels/input size automatically.
+     */
+    @Volatile var serverPort = SERVER_PORT
+
+    /** Point at a different server port and drop the socket so the next frame reconnects + re-handshakes. */
+    fun switchServerPort(p: Int) {
+        synchronized(ioLock) { if (p != serverPort) { serverPort = p; closeSocketLocked() } }
+    }
+
     @Volatile private var isReady = false
     private var socket: Socket? = null
     private var sockIn: DataInputStream? = null
@@ -105,11 +117,11 @@ class ModelManager {
         closeSocketLocked()
         return try {
             val s = Socket(); s.tcpNoDelay = true
-            s.connect(InetSocketAddress(SERVER_HOST, SERVER_PORT), 2000)
+            s.connect(InetSocketAddress(SERVER_HOST, serverPort), 2000)
             socket = s
             sockOut = DataOutputStream(s.getOutputStream())
             sockIn = DataInputStream(s.getInputStream())
-            android.util.Log.i("DCOPS", "connected to NPU server $SERVER_HOST:$SERVER_PORT")
+            android.util.Log.i("DCOPS", "connected to NPU server $SERVER_HOST:$serverPort")
             readHandshakeLocked(sockIn!!)
             true
         } catch (e: Exception) {

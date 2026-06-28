@@ -75,6 +75,15 @@
             android:layout_height="wrap_content"
             android:max="100"
             android:progress="10" />
+
+        <Switch
+            android:id="@+id/modelSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Model: YOLO  (toggle → RetinaNet)"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:thumbTint="@color/white" />
     </LinearLayout>
 
     <!-- Status bar at the bottom -->

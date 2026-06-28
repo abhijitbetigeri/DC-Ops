@@ -415,6 +415,7 @@ int main(int argc, char** argv) {
   signal(SIGPIPE, SIG_IGN);
   executorch::runtime::runtime_init();
   const char* model_path = argc > 1 ? argv[1] : "model.pte";
+  const int port = argc > 2 ? atoi(argv[2]) : PORT;  // optional 2nd arg: listen port (default PORT)
   std::string dir = dir_of(model_path);
 
   ModelCfg cfg;
@@ -581,11 +582,11 @@ int main(int argc, char** argv) {
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addr.sin_port = htons(PORT);
+  addr.sin_port = htons(port);
   if (bind(srv, (sockaddr*)&addr, sizeof(addr)) < 0) { perror("bind"); return 1; }
   listen(srv, 4);
   fprintf(stderr, "persistent NPU server (C++ decode) listening on 127.0.0.1:%d (model=%s)\n",
-          PORT, model_path);
+          port, model_path);
   fflush(stderr);
 
   // Precompute the handshake header (constant for the model's lifetime).

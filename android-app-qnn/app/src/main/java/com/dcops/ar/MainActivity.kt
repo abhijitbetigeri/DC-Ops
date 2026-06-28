@@ -132,6 +132,20 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
 
+        // Model switcher: two NPU servers run (RetinaNet on 8765, YOLO on 8766).
+        // Toggling reconnects to the other port; the handshake re-reads that model's
+        // labels/input size, and we clear tracked state so models don't bleed.
+        // Default 8765 = YOLOv8-seg (built for this 640 pipeline). Toggle -> 8766 = RetinaNet
+        // (alternate; boxes are rougher due to its 800px aspect-preserving training).
+        binding.modelSwitch.setOnCheckedChangeListener { _, checked ->
+            val port = if (checked) 8766 else 8765
+            modelManager.switchServerPort(port)
+            stabilizer.reset()
+            binding.overlayView.updateDetections(emptyList())
+            binding.modelSwitch.text =
+                if (checked) "Model: RetinaNet  (toggle → YOLO)" else "Model: YOLO  (toggle → RetinaNet)"
+        }
+
         if (hasCameraPermission()) {
             startCamera()
         } else {

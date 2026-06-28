@@ -13,9 +13,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.dcops.ar.databinding.ActivityMainBinding
-import com.dcops.ar.inference.DetectionResult
 import com.dcops.ar.inference.ModelManager
 import com.dcops.ar.camera.CameraManager
+import com.dcops.ar.overlay.DetectionStabilizer
 
 /**
  * Main activity for the DC-Ops AR app.
@@ -35,17 +35,11 @@ class MainActivity : AppCompatActivity() {
     private var testMode = false
     private var testThread: Thread? = null
 
-    // Detection persistence: hold the last non-empty detections briefly so sporadic
-    // live detections (especially when pointing at a screen) don't flicker on/off.
-    private var heldResults: List<DetectionResult> = emptyList()
-    private var heldAtMs = 0L
-    private val holdMs = 500L
-    private fun holdDetections(results: List<DetectionResult>): List<DetectionResult> {
-        val now = android.os.SystemClock.uptimeMillis()
-        if (results.isNotEmpty()) { heldResults = results; heldAtMs = now; return results }
-        if (now - heldAtMs < holdMs) return heldResults
-        heldResults = emptyList(); return emptyList()
-    }
+    // Per-object temporal stabilizer: tracks each detection across frames (IoU + class
+    // matching, TTL hold, confidence hysteresis, score EMA) so noisy near-threshold
+    // detections stop popping in/out. UI-thread-only; touched in the live path and reset
+    // on test-mode toggle. See DetectionStabilizer.
+    private val stabilizer = DetectionStabilizer()
 
     private companion object {
         val TEST_ASSETS = listOf(
@@ -98,7 +92,9 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     modelManager.processFrame(imageProxy) { results ->
                         runOnUiThread {
-                            binding.overlayView.updateDetections(holdDetections(results))
+                            binding.overlayView.updateDetections(
+                                stabilizer.update(results, android.os.SystemClock.uptimeMillis())
+                            )
                             binding.statusText.text = getString(R.string.status_processing)
                         }
                     }
@@ -154,6 +150,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun toggleTestMode() {
         testMode = !testMode
+        // Drop all tracked live state so test-gallery images stay independent and no
+        // stale live track survives a test session (runs on the UI thread = safe).
+        stabilizer.reset()
         if (testMode) {
             binding.testImageView.visibility = android.view.View.VISIBLE
             startTestCycle()

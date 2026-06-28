@@ -18,7 +18,10 @@ class ModelManager {
 
     companion object {
         const val MODEL_FILENAME = "dc_ops_yolov8n_seg.pte"
-        const val QNN_MODEL_FILENAME = "dc_ops_retinanet_qnn.pte"
+        // QNN HTP (NPU) model — YOLOv8n-seg exported to Hexagon HTP.
+        // Uses the same single-tensor YOLO output as the CPU model, so the
+        // existing parseYoloOutput() path handles it (no anchor decoding needed).
+        const val QNN_MODEL_FILENAME = "dc_ops_yolo_qnn.pte"
         const val INPUT_SIZE = 640
         const val CONF_THRESHOLD = 0.25f
         const val IOU_THRESHOLD = 0.45f

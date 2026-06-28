@@ -3,13 +3,26 @@ package com.dcops.ar.overlay
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.CornerPathEffect
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import com.dcops.ar.inference.DetectionResult
-import com.dcops.ar.inference.ModelManager
+import com.dcops.ar.ui.DetectionMissionStyle
+import com.dcops.ar.ui.DetectionUrgency
+import kotlin.math.sin
+
+data class CableMatchVisualization(
+    val cableDetection: DetectionResult?,
+    val portDetection: DetectionResult?,
+    val cableLabel: String,
+    val portLabel: String,
+    val activeColor: Int
+)
 
 /**
  * Custom [View] that draws detection polygons on top of the live camera preview.
@@ -28,33 +41,42 @@ class PolygonOverlayView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var detections: List<DetectionResult> = emptyList()
+    private var focusDetection: DetectionResult? = null
+    private var cableMatchVisualization: CableMatchVisualization? = null
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 4f
         isAntiAlias = true
+        pathEffect = CornerPathEffect(18f)
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        alpha = 60
     }
 
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 36f
-        isFakeBoldText = true
-        setShadowLayer(4f, 1f, 1f, Color.BLACK)
+    private val matchPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 9f
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        setShadowLayer(14f, 0f, 0f, Color.BLACK)
     }
 
-    private val textBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#AA000000")
-        style = Paint.Style.FILL
+    private val pulsePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 7f
     }
 
     /** Update detections and trigger a redraw.  Call on the main thread. */
-    fun updateDetections(newDetections: List<DetectionResult>) {
+    fun updateDetections(
+        newDetections: List<DetectionResult>,
+        focus: DetectionResult? = null,
+        cableMatch: CableMatchVisualization? = null
+    ) {
         detections = newDetections
+        focusDetection = focus
+        cableMatchVisualization = cableMatch
         invalidate()
     }
 
@@ -68,9 +90,11 @@ class PolygonOverlayView @JvmOverloads constructor(
         for (det in detections) {
             if (det.polygon.isEmpty()) continue
 
-            val color = colorForClass(det.classId)
+            val urgency = DetectionMissionStyle.urgencyFor(det)
+            val color = colorFor(det, urgency)
+            val isFocus = det == focusDetection
+            val isLowConfidence = det.score < 0.60f
 
-            // Build the polygon path in pixel coordinates
             val path = Path()
             val first = det.polygon[0]
             path.moveTo(first.x * w, first.y * h)
@@ -79,64 +103,74 @@ class PolygonOverlayView @JvmOverloads constructor(
             }
             path.close()
 
-            // Fill (semi-transparent)
             fillPaint.color = color
+            fillPaint.alpha = when {
+                isFocus -> 76
+                urgency == DetectionUrgency.CRITICAL -> 64
+                else -> 42
+            }
             canvas.drawPath(path, fillPaint)
 
-            // Stroke
             strokePaint.color = color
-            canvas.drawPath(path, strokePaint)
-
-            // Draw vertices
-            strokePaint.style = Paint.Style.FILL
-            for (p in det.polygon) {
-                canvas.drawCircle(p.x * w, p.y * h, 5f, strokePaint)
+            strokePaint.strokeWidth = if (isFocus) 8f else 4f
+            strokePaint.pathEffect = when {
+                isFocus -> CornerPathEffect(24f)
+                isLowConfidence || urgency == DetectionUrgency.REVIEW -> DashPathEffect(
+                    floatArrayOf(18f, 14f),
+                    0f
+                )
+                else -> CornerPathEffect(18f)
             }
-            strokePaint.style = Paint.Style.STROKE
-
-            // Draw label text at the top-most vertex
-            val labelPoint = det.polygon.minByOrNull { it.y } ?: det.polygon[0]
-            val labelX = labelPoint.x * w
-            val labelY = labelPoint.y * h - 12f
-            val labelText = "${det.label}  ${(det.score * 100).toInt()}%"
-            val textWidth = textPaint.measureText(labelText)
-            val textHeight = textPaint.textSize
-
-            canvas.drawRect(
-                labelX - 6f,
-                labelY - textHeight,
-                labelX + textWidth + 6f,
-                labelY + 6f,
-                textBgPaint
-            )
-            canvas.drawText(labelText, labelX, labelY, textPaint)
+            canvas.drawPath(path, strokePaint)
         }
+
+        drawCableMatch(canvas, w, h)
+    }
+
+    private fun drawCableMatch(canvas: Canvas, width: Float, height: Float) {
+        val match = cableMatchVisualization ?: return
+        val port = match.portDetection ?: return
+        val portCenter = centerOf(port, width, height) ?: return
+        val pulse = ((sin(SystemClock.uptimeMillis() / 180.0) + 1.0) / 2.0).toFloat()
+        val pulseRadius = 30f + pulse * 22f
+
+        pulsePaint.color = match.activeColor
+        pulsePaint.alpha = 155 + (pulse * 85f).toInt()
+        canvas.drawCircle(portCenter.x, portCenter.y, pulseRadius, pulsePaint)
+        canvas.drawCircle(portCenter.x, portCenter.y, pulseRadius + 18f, pulsePaint)
+
+        val cableCenter = match.cableDetection?.let { centerOf(it, width, height) } ?: return
+        matchPaint.color = match.activeColor
+        matchPaint.alpha = 230
+        canvas.drawLine(cableCenter.x, cableCenter.y, portCenter.x, portCenter.y, matchPaint)
+
+        fillPaint.color = match.activeColor
+        fillPaint.alpha = 210
+        canvas.drawCircle(cableCenter.x, cableCenter.y, 13f, fillPaint)
+        canvas.drawCircle(portCenter.x, portCenter.y, 13f, fillPaint)
+    }
+
+    private fun centerOf(detection: DetectionResult, width: Float, height: Float): PointF? {
+        if (detection.polygon.isEmpty()) return null
+        val centerX = detection.polygon.map { it.x }.average().toFloat() * width
+        val centerY = detection.polygon.map { it.y }.average().toFloat() * height
+        return PointF(centerX, centerY)
     }
 
     companion object {
-        // One distinct color per DC class for visual separation
-        private val CLASS_COLORS = intArrayOf(
-            Color.parseColor("#4CAF50"),  //  0 server rack      — green
-            Color.parseColor("#FF9800"),  //  1 compute tray     — orange
-            Color.parseColor("#9C27B0"),  //  2 NVLink switch    — purple
-            Color.parseColor("#2196F3"),  //  3 network switch   — blue
-            Color.parseColor("#F44336"),  //  4 power shelf      — red
-            Color.parseColor("#00BCD4"),  //  5 cable            — cyan
-            Color.parseColor("#FFEB3B"),  //  6 network port     — yellow
-            Color.parseColor("#00E676"),  //  7 LED indicator    — bright green
-            Color.parseColor("#E040FB"),  //  8 label            — magenta
-            Color.parseColor("#795548"),  //  9 fan              — brown
-            Color.parseColor("#03A9F4"),  // 10 cooling manifold — light blue
-            Color.parseColor("#FF5722"),  // 11 cable cartridge  — deep orange
-            Color.parseColor("#FFC107"),  // 12 power connector  — amber
-            Color.parseColor("#8BC34A"),  // 13 drive bay        — light green
-            Color.parseColor("#607D8B"),  // 14 management port  — blue grey
-            Color.parseColor("#FF1744"),  // 15 DPU              — red accent
-        )
+        private const val HEALTHY_COLOR = "#2BE38A"
+        private const val REVIEW_COLOR = "#FFB020"
+        private const val CRITICAL_COLOR = "#FF5A5F"
+        private const val FALLBACK_COLOR = "#62D4FF"
     }
 
-    private fun colorForClass(classId: Int): Int {
-        if (classId in CLASS_COLORS.indices) return CLASS_COLORS[classId]
-        return Color.WHITE
+    private fun colorFor(det: DetectionResult, urgency: DetectionUrgency): Int {
+        return when (urgency) {
+            DetectionUrgency.HEALTHY -> {
+                if (det.classId == 8) Color.parseColor(FALLBACK_COLOR) else Color.parseColor(HEALTHY_COLOR)
+            }
+            DetectionUrgency.REVIEW -> Color.parseColor(REVIEW_COLOR)
+            DetectionUrgency.CRITICAL -> Color.parseColor(CRITICAL_COLOR)
+        }
     }
 }

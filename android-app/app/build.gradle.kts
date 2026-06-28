@@ -55,8 +55,11 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
 
-    // ExecuTorch runtime (place executorch.aar in app/libs/)
-    implementation(files("libs/executorch.aar"))
+    // ExecuTorch runtime (optional for local builds, required for on-device inference)
+    val executorchAar = file("libs/executorch.aar")
+    if (executorchAar.exists()) {
+        runtimeOnly(files(executorchAar))
+    }
     // ExecuTorch's Module loads its native lib via Facebook SoLoader/NativeLoader,
     // which is NOT bundled in the AAR and must be provided explicitly.
     implementation("com.facebook.soloader:nativeloader:0.10.5")

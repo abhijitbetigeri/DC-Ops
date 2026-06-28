@@ -246,9 +246,24 @@ slide7.addText("TRAINING PIPELINE", {
   fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
 });
 
-slide7.addText("2,036 human-labeled images from 4 Roboflow datasets (CC BY 4.0)", {
-  x: 0.8, y: 1.2, w: 11, h: 0.5,
-  fontSize: 16, fontFace: "Arial", color: TEXT_WHITE,
+// Phase 1 — BrightData web scraping + auto-labeling
+slide7.addShape(pres.ShapeType.roundRect, {
+  x: 0.8, y: 1.2, w: 11.4, h: 1.15,
+  fill: { color: BG_CARD }, rectRadius: 0.1, line: { color: ACCENT3, width: 1.5 },
+});
+slide7.addText("PHASE 1 — Bootstrap", {
+  x: 1.0, y: 1.32, w: 3.0, h: 0.4,
+  fontSize: 13, fontFace: "Arial", color: ACCENT3, bold: true,
+});
+slide7.addText("BrightData Web Unlocker scraped 300+ data-center images  →  auto-labeled with Grounding DINO + SAM (3,045 polygons)", {
+  x: 1.0, y: 1.72, w: 11.0, h: 0.5,
+  fontSize: 13, fontFace: "Arial", color: TEXT_LIGHT,
+});
+
+// Phase 2 — Roboflow human-labeled (used for final models)
+slide7.addText("PHASE 2 — 2,036 human-labeled images from 4 Roboflow datasets (CC BY 4.0)  ·  used for final models", {
+  x: 0.8, y: 2.55, w: 11.4, h: 0.4,
+  fontSize: 14, fontFace: "Arial", color: ACCENT, bold: true,
 });
 
 const datasets = [
@@ -259,31 +274,35 @@ const datasets = [
 ];
 
 datasets.forEach((d, i) => {
-  const y = 2.0 + i * 0.9;
+  const y = 3.1 + i * 0.62;
   slide7.addText(d.name, {
     x: 0.8, y: y, w: 2.5, h: 0.5,
-    fontSize: 14, fontFace: "Arial", color: TEXT_WHITE, bold: true,
+    fontSize: 13, fontFace: "Arial", color: TEXT_WHITE, bold: true,
   });
   slide7.addText(d.imgs + " imgs", {
     x: 3.3, y: y, w: 1.5, h: 0.5,
-    fontSize: 14, fontFace: "Arial", color: ACCENT,
+    fontSize: 13, fontFace: "Arial", color: ACCENT,
   });
   slide7.addText(d.classes, {
     x: 4.8, y: y, w: 5.0, h: 0.5,
-    fontSize: 12, fontFace: "Arial", color: TEXT_MUTED,
-  });
-  // progress bar
-  slide7.addShape(pres.ShapeType.rect, {
-    x: 10.0, y: y + 0.15, w: 2.0, h: 0.2, fill: { color: BG_CARD },
+    fontSize: 11, fontFace: "Arial", color: TEXT_MUTED,
   });
   slide7.addShape(pres.ShapeType.rect, {
-    x: 10.0, y: y + 0.15, w: 2.0 * d.pct / 100, h: 0.2, fill: { color: ACCENT },
+    x: 10.0, y: y + 0.12, w: 2.0, h: 0.18, fill: { color: BG_CARD },
+  });
+  slide7.addShape(pres.ShapeType.rect, {
+    x: 10.0, y: y + 0.12, w: 2.0 * d.pct / 100, h: 0.18, fill: { color: ACCENT },
   });
 });
 
-slide7.addText("50+ source classes → mapped to 16 DC-Ops classes\nAugmentations: Moiré patterns, screen glare, brightness variation, color tint, scanlines", {
-  x: 0.8, y: 5.0, w: 11, h: 0.8,
-  fontSize: 13, fontFace: "Arial", color: TEXT_LIGHT, lineSpacingMultiple: 1.4,
+slide7.addText("50+ source classes → mapped to 16 DC-Ops classes   ·   Augmentations: Moiré, screen glare, brightness, color tint, scanlines", {
+  x: 0.8, y: 5.7, w: 11.4, h: 0.4,
+  fontSize: 12, fontFace: "Arial", color: TEXT_LIGHT,
+});
+
+slide7.addText("⚡ Powered by BrightData — web data infrastructure for the bootstrap dataset", {
+  x: 0.8, y: 6.2, w: 11.4, h: 0.4,
+  fontSize: 13, fontFace: "Arial", color: ACCENT3, italic: true, bold: true,
 });
 
 // ============ SLIDE 8: MODEL PERFORMANCE ============
@@ -460,38 +479,43 @@ slide11.addText("CPU vs NPU COMPARISON", {
   fontSize: 36, fontFace: "Arial Black", color: ACCENT, bold: true,
 });
 
-// Two columns
+// Two columns — measured facts vs estimated performance clearly separated
 const comparisons = [
-  ["Backend", "XNNPACK (CPU)", "QNN HTP (NPU)"],
-  ["Model", "YOLOv8n-seg", "RetinaNet"],
-  ["Size", "13 MB", "36 MB"],
-  ["Quantization", "FP32", "INT8"],
-  ["Est. Latency", "~15-30ms", "~3-5ms"],
-  ["Est. FPS", "~30-60", "~100+"],
-  ["Power", "Higher drain", "4-5x efficient"],
-  ["Hardware", "ARM Kryo cores", "Hexagon HTP v79"],
+  ["Backend", "XNNPACK (CPU)", "QNN HTP (NPU)", false],
+  ["Model", "YOLOv8n-seg", "RetinaNet", false],
+  ["Size", "13 MB", "36 MB", false],
+  ["Quantization", "FP32", "INT8", false],
+  ["Hardware", "ARM Kryo cores", "Hexagon HTP v79", false],
+  ["Latency †", "~15-30 ms", "~3-5 ms", true],
+  ["Throughput †", "~30-60 FPS", "~100+ FPS", true],
+  ["Power †", "Baseline", "4-5x efficient", true],
 ];
 
 comparisons.forEach((row, i) => {
-  const y = 1.3 + i * 0.58;
+  const y = 1.3 + i * 0.52;
   const bg = i === 0 ? "1E2761" : (i % 2 === 0 ? BG_CARD : BG_DARK);
   const tc = i === 0 ? ACCENT : TEXT_WHITE;
-  const bold = i === 0;
+  const isEst = row[3] === true;
   slide11.addShape(pres.ShapeType.rect, {
-    x: 0.8, y: y, w: 11.4, h: 0.55, fill: { color: bg },
+    x: 0.8, y: y, w: 11.4, h: 0.5, fill: { color: bg },
   });
   slide11.addText(row[0], {
-    x: 0.9, y: y, w: 3.5, h: 0.55,
-    fontSize: 14, fontFace: "Arial", color: tc, bold: bold, valign: "middle",
+    x: 0.9, y: y, w: 3.5, h: 0.5,
+    fontSize: 14, fontFace: "Arial", color: isEst ? TEXT_MUTED : tc, bold: i === 0, valign: "middle",
   });
   slide11.addText(row[1], {
-    x: 4.5, y: y, w: 3.5, h: 0.55,
-    fontSize: 14, fontFace: "Arial", color: i === 0 ? tc : TEXT_MUTED, bold: bold, valign: "middle",
+    x: 4.5, y: y, w: 3.5, h: 0.5,
+    fontSize: 14, fontFace: "Arial", color: i === 0 ? tc : (isEst ? TEXT_MUTED : TEXT_WHITE), bold: i === 0, valign: "middle",
   });
   slide11.addText(row[2], {
-    x: 8.0, y: y, w: 4.0, h: 0.55,
+    x: 8.0, y: y, w: 4.0, h: 0.5,
     fontSize: 14, fontFace: "Arial", color: i === 0 ? tc : ACCENT, bold: true, valign: "middle",
   });
+});
+
+slide11.addText("† Estimated from Qualcomm QNN HTP benchmarks — not yet measured on our specific model. Measured FPS shown live in-app.", {
+  x: 0.8, y: 5.65, w: 11.4, h: 0.5,
+  fontSize: 12, fontFace: "Arial", color: TEXT_MUTED, italic: true,
 });
 
 // ============ SLIDE 12: WHAT'S NEXT ============

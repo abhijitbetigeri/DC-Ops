@@ -2,7 +2,11 @@
 
 **Qualcomm x Meta ExecuTorch Hackathon — June 27–28, 2026**
 
-Real-time camera-based tool for data center technicians. Point your phone at server racks to detect components — compute trays, network ports, LEDs, cables, fans, drive bays, and more — with on-device AI. Includes an intelligent RAG-powered knowledge overlay for troubleshooting, specs, and maintenance guidance.
+Real-time camera-based tool for data center technicians. Point your phone at server racks to detect components — compute trays, network ports, LEDs, cables, fans, drive bays, and more — with on-device AI. Runs **live on the Samsung Galaxy S25 Ultra**, fully offline, with detection selectable between the CPU and the Snapdragon **Hexagon NPU**.
+
+## The Problem
+
+Over **1,000 server racks are built every week**, assembled at volume by labor crews cross-referencing paper guides. Roughly **80% are installed incorrectly the first time** — cables in the wrong ports, components misidentified. DC-Ops turns any Snapdragon phone into a real-time inspection and assembly-guidance tool.
 
 ## Why On-Device?
 
@@ -10,41 +14,45 @@ Real-time camera-based tool for data center technicians. Point your phone at ser
 - **Privacy**: Serial numbers, rack topology, and infrastructure status are sensitive/classified
 - **Latency**: Technicians need instant visual feedback walking through aisles
 - **Offline-first**: Even connected DCs have dead zones between rack rows
+- **Power efficiency**: Continuous live detection on the NPU sips battery vs. the CPU
 
 ## Architecture
 
 ```
-Camera (CameraX, 30fps)
+Camera (CameraX)
  │
  ▼
-RetinaNet-ResNet50-FPN (INT8 quantized)
- ├─ ExecuTorch → QNN HTP → Snapdragon NPU (primary, ~3-5ms)
- └─ ExecuTorch → XNNPACK → CPU (fallback, ~15-30ms)
+YOLOv8n-seg  (fine-tuned for 16 DC component classes)
+ ├─ ExecuTorch → QNN HTP → Snapdragon NPU   (INT8, 3.2 MB)   ← runs on the Hexagon NPU
+ └─ ExecuTorch → XNNPACK → CPU              (FP32, 13 MB)    ← CPU path / fallback
  │
- ├─ 16 DC component classes detected with bounding polygons
- ├─ Compute trays, NVLink switches, network ports, LEDs, cables, etc.
- │
- ▼
-RAG Knowledge Overlay (CLIP ViT-B-32 + FAISS)
- ├─ Detected component → text embedding → nearest-neighbor search
- ├─ Returns: specs, troubleshooting, LED meanings, maintenance steps
- └─ 80 knowledge chunks, 160KB index, fully on-device
+ ├─ NPU model emits raw conv feature maps; YOLO anchor-decode (DFL + NMS)
+ │  runs on-device in ModelManager.parseRawYoloOutput()
  │
  ▼
-AR Overlay + Live Metrics
- ├─ Color-coded polygon overlays on camera feed (16 distinct colors)
- ├─ Live FPS + latency display
- ├─ CPU ↔ NPU backend toggle for comparison
- └─ Tap component → info panel with specs + troubleshooting
+Two modes (live on the S25)
+ ├─ Server Scan  — multi-class detection with color-coded overlays
+ └─ Cable Match  — "Mission Control" AR workflow that highlights the exact
+                   port for the next cable, guiding correct rack assembly
+ │
+ ▼
+RAG Knowledge Overlay (CLIP ViT-B-32 + FAISS, 160 KB, on-device)
+ └─ Detected component → specs, LED-status meanings, troubleshooting, maintenance
 ```
 
 ## Models
 
-| Model | Backend | Size | Purpose | Status |
-|---|---|---|---|---|
-| RetinaNet-ResNet50-FPN | **QNN HTP (NPU)** | 36 MB | Primary detection on Snapdragon NPU | ✅ Ready |
-| YOLOv8n-seg v3 | XNNPACK (CPU) | 13 MB | CPU fallback + comparison | ✅ Ready |
-| CLIP ViT-B-32 | CPU | 160 KB index | RAG knowledge retrieval | ✅ Ready |
+| Model | Backend | Size | Status |
+|---|---|---|---|
+| **YOLOv8n-seg** (fine-tuned) | **QNN HTP (NPU)** | **3.2 MB** | ✅ Working — runs on the Hexagon NPU |
+| YOLOv8n-seg (fine-tuned) | XNNPACK (CPU) | 13 MB | ✅ Working — proven live on S25 |
+| CLIP ViT-B-32 + FAISS | CPU | 160 KB | ✅ RAG knowledge retrieval |
+| RetinaNet-ResNet50-FPN | QNN HTP | 36 MB | ⚠️ Compiles to NPU; anchor-decode integration WIP |
+
+The NPU model is the same fine-tuned YOLOv8n-seg, INT8-quantized and compiled for the
+Hexagon HTP. Because the QNN backend can't compile YOLO's dynamic anchor decode, we
+export only the **raw convolution feature maps** (pure convs → clean NPU lowering) and
+run the lightweight decode (DFL → anchors → boxes → NMS) on-device in the app.
 
 ## 16 DC Component Classes
 
@@ -67,9 +75,13 @@ AR Overlay + Live Metrics
 | 14 | management port | BMC RJ45, serial console |
 | 15 | DPU | BlueField DPU / ConnectX NIC |
 
+See [MODEL_CLASSES.md](MODEL_CLASSES.md) for source-class mapping, indexing notes, and per-class detection reliability.
+
 ## Training Data
 
-**2,036 human-labeled images** from 4 Roboflow datasets (CC BY 4.0):
+**2,036 human-labeled images** from 4 Roboflow datasets (CC BY 4.0), bootstrapped with a
+**BrightData** web-scraping + Grounding DINO/SAM auto-labeling pipeline, augmented for
+moiré patterns, screen glare, and brightness (so it survives real-world camera conditions):
 
 | Dataset | Images | Source Classes |
 |---|---|---|
@@ -84,11 +96,10 @@ All source classes mapped to our 16 DC-Ops classes via `scripts/merge_datasets.p
 
 On-device retrieval-augmented generation for component information:
 
-- **80 knowledge chunks** covering all 16 component classes
-- Each chunk contains: description, specs, troubleshooting, LED status meanings, maintenance procedures
-- **NVIDIA GB200 NVL72** specific documentation included
+- **80 knowledge chunks** covering all 16 component classes (description, specs, troubleshooting, LED meanings, maintenance)
+- **NVIDIA GB200 NVL72**-specific documentation included
 - CLIP ViT-B-32 text embeddings + FAISS nearest-neighbor search
-- **160 KB** total index size — fully on-device, no cloud needed
+- **160 KB** total index — fully on-device, no cloud needed
 
 Example: detect "compute tray" → RAG returns:
 > *"1RU compute tray: 2x Grace CPUs, 4x B200 GPUs, 192GB HBM3e. Amber LED = check BMC log. Verify coolant flow rate."*
@@ -97,64 +108,46 @@ Example: detect "compute tray" → RAG returns:
 
 | Component | Tool | Runtime |
 |---|---|---|
-| Detection | RetinaNet-ResNet50-FPN-v2 (INT8) | ExecuTorch → QNN HTP (Snapdragon NPU) |
-| Detection (fallback) | YOLOv8n-seg v3 | ExecuTorch → XNNPACK (CPU) |
+| Detection (NPU) | Fine-tuned YOLOv8n-seg (INT8) | ExecuTorch → QNN HTP (Snapdragon NPU) |
+| Detection (CPU) | Fine-tuned YOLOv8n-seg (FP32) | ExecuTorch → XNNPACK |
+| On-device decode | DFL + anchors + NMS (Kotlin) | App-side post-processing |
 | RAG retrieval | CLIP ViT-B-32 + FAISS | On-device |
 | Android app | Kotlin + CameraX + ExecuTorch AAR | Galaxy S25 Ultra |
+| Data pipeline | Roboflow + BrightData + Grounding DINO/SAM | Training-time |
 | Model format | .pte (ExecuTorch) | Compiled for SM8750 |
-| Knowledge base | JSON + FAISS index | 160 KB on-device |
 
 ## Target Device
 
-- **Samsung Galaxy S25 Ultra**
+- **Samsung Galaxy S25 Ultra** (SM-S938U1)
 - **Chipset**: Snapdragon 8 Elite for Galaxy (SM8750-AC)
-- **Hexagon**: v79 / SOC Model 69
-- **NPU**: Hexagon Tensor Processor (HTP) for accelerated inference
+- **Hexagon**: v79 — **NPU**: Hexagon Tensor Processor (HTP)
 
 ## Project Structure
 
 ```
 DC-Ops/
-├── android-app/              # Android application
-│   └── app/
-│       ├── libs/             # executorch.aar (3.4 MB)
-│       └── src/main/
-│           ├── assets/       # .pte models (QNN + XNNPACK)
-│           └── java/com/dcops/ar/
-│               ├── MainActivity.kt          # Camera + backend toggle + metrics
-│               ├── camera/CameraManager.kt  # CameraX preview + analysis
-│               ├── inference/
-│               │   ├── ModelManager.kt      # ExecuTorch inference + dual backend
-│               │   └── DetectionResult.kt   # Detection data class
-│               └── overlay/
-│                   └── PolygonOverlayView.kt # AR polygon overlay (16 colors)
-├── data/
-│   ├── knowledge_base/       # RAG index + component documentation
-│   ├── sample_images/        # Training images
-│   └── merged_dataset/       # Merged Roboflow datasets (YOLO format)
-├── models/                   # Trained weights + .pte files
-├── notebooks/                # Colab notebooks for training + export
-│   ├── train_merged_colab.ipynb          # Train on 2,036 Roboflow images
-│   ├── train_retinanet_qnn_colab.ipynb   # RetinaNet + QNN HTP export
-│   ├── export_qnn_colab.ipynb            # QNN export standalone
+├── android-app/              # Android application (Kotlin, CameraX, ExecuTorch)
+│   └── app/src/main/
+│       ├── assets/           # .pte models (YOLO CPU + YOLO NPU + RetinaNet)
+│       └── java/com/dcops/ar/
+│           ├── inference/ModelManager.kt   # ExecuTorch inference + on-device YOLO decode
+│           └── overlay/PolygonOverlayView.kt
+├── data/knowledge_base/      # RAG index + component documentation
+├── models/                   # Trained weights + .pte files (gitignored; on HF)
+├── notebooks/                # Colab notebooks for training + QNN export
+│   ├── train_merged_colab.ipynb          # Train YOLOv8n-seg on 2,036 images
+│   ├── export_yolo_qnn_colab.ipynb       # YOLO → QNN HTP export (raw-map approach)
 │   └── build_rag_colab.ipynb             # RAG index builder
-├── scripts/                  # Build, train, and utility scripts
-│   ├── merge_datasets.py     # Merge 4 Roboflow datasets
-│   ├── build_rag_index.py    # CLIP embeddings + FAISS index
-│   ├── benchmark_on_device.sh # CPU vs NPU benchmark
-│   └── setup_env.sh          # Environment setup
-├── executorch/               # ExecuTorch SDK (gitignored)
-├── CLAUDE.md
+├── scripts/                  # merge_datasets, build_rag_index, benchmark, setup
+├── presentation/             # Pitch deck (PPTX + PDF)
+├── MODEL_CLASSES.md          # Class reference + decode/indexing notes
 └── README.md
 ```
 
 ## Setup
 
 ### Prerequisites
-- Python 3.12
-- JDK 17
-- Android NDK v26
-- QAIRT SDK 2.46.0
+- Python 3.12, JDK 17, Android NDK v26, QAIRT SDK 2.46
 
 ### Quick Start
 ```bash
@@ -168,55 +161,65 @@ cd android-app
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### Train Models (Colab)
-Upload notebooks to Google Colab (T4 GPU):
-1. `train_retinanet_qnn_colab.ipynb` — fine-tune RetinaNet + QNN HTP export
-2. `train_merged_colab.ipynb` — train on merged Roboflow datasets
+### Export YOLO → QNN HTP (NPU)
+Upload `notebooks/export_yolo_qnn_colab.ipynb` to Colab (Linux required for QNN
+compilation), set runtime, and **Run all**. Produces `dc_ops_yolo_qnn.pte` (3.2 MB).
+Drop it into `android-app/app/src/main/assets/` — the app's `parseRawYoloOutput()`
+decoder auto-activates for the NPU toggle.
 
-### Build RAG Index
-```bash
-python scripts/build_rag_index.py
-```
+## Demo Flow
 
-## Demo Plan (5 min)
-
-1. **(0:00–1:00)** Point phone at server rack → real-time component detection with colored overlays
-2. **(1:00–2:00)** Tap a detected component → RAG info panel shows specs + troubleshooting
-3. **(2:00–3:00)** Toggle CPU ↔ NPU → show FPS/latency difference (15ms vs 3ms)
-4. **(3:00–4:00)** Enable airplane mode → everything still works (air-gapped demo)
-5. **(4:00–5:00)** Architecture walkthrough: ExecuTorch + QNN HTP + on-device RAG
-
-## Models on Hugging Face
-
-All models available at: [abhijitbetigeri/dc-ops-dataset](https://huggingface.co/datasets/abhijitbetigeri/dc-ops-dataset)
-
-| File | Description |
-|---|---|
-| `models/dc_ops_retinanet_qnn.pte` | RetinaNet QNN HTP for Snapdragon NPU (36 MB) |
-| `models/dc_ops_yolov8n_seg_v3.pte` | YOLOv8n-seg XNNPACK for CPU (13 MB) |
-| `models/dc_ops_yolov8n_seg_v3.pt` | YOLOv8n-seg PyTorch weights (6.4 MB) |
+1. Point phone at a server rack / mini PC → **Server Scan** draws live colored overlays
+2. **Cable Match** mode → app highlights the exact port for the next cable
+3. Tap a component → RAG info panel: specs, LED meanings, troubleshooting
+4. Toggle **CPU ↔ NPU** live → same model, different hardware
+5. Airplane mode → everything still works (air-gapped proof)
 
 ## Performance
 
-### RetinaNet (trained on 2,036 images, 10 epochs)
-- Final training loss: **1.61**
-- Backend: QNN HTP (INT8 quantized) for SM8750
-
-### YOLOv8n-seg v3 (trained on 2,036 images, 50 epochs)
+### Fine-tuned YOLOv8n-seg (2,036 images)
 | Class | mAP50 |
 |---|---|
 | compute tray | **0.924** |
 | network port | **0.912** |
+| drive bay | **0.912** |
+| cooling manifold | **0.833** |
 | power shelf | **0.832** |
-| LED indicator | **0.808** |
+| DPU / LED indicator | **0.808** |
 | server rack | 0.683 |
 | cable | 0.660 |
-| **Overall** | **0.749** |
+| **Overall (box)** | **0.749** |
+
+Confusion matrices published on Hugging Face (`results/`).
+
+### NPU vs CPU
+| | XNNPACK (CPU) | QNN HTP (NPU) |
+|---|---|---|
+| Hardware | ARM Kryo cores | Hexagon Tensor Processor v79 |
+| Precision | FP32 | INT8 |
+| Size | 13 MB | **3.2 MB** |
+| Speed / power | Baseline | Faster, more efficient (NPU-accelerated) |
+
+## Models on Hugging Face
+
+[abhijitbetigeri/dc-ops-dataset](https://huggingface.co/datasets/abhijitbetigeri/dc-ops-dataset)
+
+| File | Description |
+|---|---|
+| `models/dc_ops_yolo_qnn.pte` | **YOLOv8n-seg QNN HTP — Snapdragon NPU (INT8, 3.2 MB)** |
+| `models/dc_ops_yolov8n_seg_v3.pte` | YOLOv8n-seg XNNPACK — CPU (13 MB) |
+| `models/dc_ops_yolov8n_seg_v3.pt` | YOLOv8n-seg PyTorch source weights (6.4 MB) |
+| `models/dc_ops_retinanet_qnn.pte` | RetinaNet QNN HTP (36 MB, experimental) |
+| `results/` | Confusion matrices |
 
 ## Team
 
 | Role | Focus |
 |---|---|
-| Model Engineer | RetinaNet + QNN HTP export, data pipeline, RAG |
-| Android Developer | CameraX, ExecuTorch AAR, AR overlay, backend toggle |
-| Data + Demo | Roboflow datasets, demo scenario, presentation |
+| Model Engineer | YOLOv8n-seg fine-tuning, QNN HTP export, on-device decode, RAG |
+| Android Developer | CameraX, ExecuTorch AAR, Mission Control UI, backend toggle |
+| Data + Demo | Roboflow datasets, 3D NVL72 model, presentation |
+
+---
+
+Built with **ExecuTorch + Qualcomm QNN HTP + Snapdragon 8 Elite** — real-time data-center inspection that never touches the cloud.

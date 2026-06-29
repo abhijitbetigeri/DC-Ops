@@ -42,6 +42,7 @@ class ModelManager {
     private var module: Any? = null
     private var isReady = false
     private var isRetinaNet = false
+    private var isRawYolo = false   // QNN model outputs raw feature maps -> decode on-device
     private val inputBuffer = FloatBuffer.allocate(3 * INPUT_SIZE * INPUT_SIZE)
 
     fun init(context: Context, onReady: (Boolean) -> Unit) {
@@ -70,6 +71,7 @@ class ModelManager {
                 val modelPath = assetFilePath(context, modelFile)
                 module = loadExecuTorchModule(modelPath)
                 isRetinaNet = modelFile.contains("retinanet")
+                isRawYolo = modelFile.contains("yolo_qnn")
                 isReady = true
                 onReady(true)
             } catch (e: Exception) {
@@ -90,14 +92,14 @@ class ModelManager {
             val inputTensor = if (isRetinaNet) {
                 bitmapToEValueNormalized(scaled)
             } else {
-                bitmapToEValue(scaled)
+                bitmapToEValue(scaled)   // YOLO (CPU + raw QNN) both use 0-1
             }
 
             val outputs = runModuleForward(loadedModule, inputTensor)
-            val results = if (isRetinaNet) {
-                parseRetinaNetOutput(outputs)
-            } else {
-                parseYoloOutput(outputs)
+            val results = when {
+                isRetinaNet -> parseRetinaNetOutput(outputs)
+                isRawYolo -> parseRawYoloOutput(outputs)
+                else -> parseYoloOutput(outputs)
             }
             onResult(results)
         } catch (e: Exception) {
@@ -314,6 +316,92 @@ class ModelManager {
                 bboxPolygon(cxArr[i], cyArr[i], wArr[i], hArr[i], scale)
             }
             DetectionResult(DC_CLASSES[classArr[i]], scoreArr[i], polygon, classArr[i])
+        }
+    }
+
+    // --- Raw YOLO (QNN/NPU) decode ---
+    // The QNN model outputs 3 raw feature maps [1, 80, H, W] (H/W = 80/40/20).
+    // Channels: 0-63 = box DFL (4 sides x 16 bins), 64-79 = 16 class logits.
+    // We decode anchors + DFL + boxes here on-device (the NPU graph stays pure conv).
+
+    private val REG_MAX = 16
+    private val NUM_CLS = 16
+
+    private fun parseRawYoloOutput(outputs: Array<*>): List<DetectionResult> {
+        if (outputs.isEmpty()) return emptyList()
+
+        data class Raw(val cx: Float, val cy: Float, val w: Float, val h: Float,
+                       val cls: Int, val score: Float)
+        val raw = mutableListOf<Raw>()
+
+        for (out in outputs) {
+            val t = toTensor(out ?: continue)
+            val data = tensorDataAsFloatArray(t)
+            val shape = tensorShape(t)            // [1, 80, H, W]
+            if (shape.size < 4) continue
+            val ch = shape[1].toInt()             // 80
+            val gh = shape[2].toInt()
+            val gw = shape[3].toInt()
+            val hw = gh * gw
+            val stride = INPUT_SIZE.toFloat() / gh
+            if (ch < 4 * REG_MAX + NUM_CLS) continue
+
+            val dist = FloatArray(4)
+            for (gy in 0 until gh) {
+                for (gx in 0 until gw) {
+                    val cell = gy * gw + gx
+                    // best class via sigmoid on channels 64..79
+                    var bestCls = 0; var bestScore = 0f
+                    for (c in 0 until NUM_CLS) {
+                        val v = sigmoid(data[(4 * REG_MAX + c) * hw + cell])
+                        if (v > bestScore) { bestScore = v; bestCls = c }
+                    }
+                    if (bestScore < CONF_THRESHOLD) continue
+
+                    // DFL: per side, softmax over 16 bins, weighted sum by bin index
+                    for (side in 0 until 4) {
+                        var maxv = -1e30f
+                        for (b in 0 until REG_MAX) {
+                            val v = data[(side * REG_MAX + b) * hw + cell]
+                            if (v > maxv) maxv = v
+                        }
+                        var sum = 0f
+                        val exps = FloatArray(REG_MAX)
+                        for (b in 0 until REG_MAX) {
+                            val e = exp(data[(side * REG_MAX + b) * hw + cell] - maxv)
+                            exps[b] = e; sum += e
+                        }
+                        var d = 0f
+                        for (b in 0 until REG_MAX) d += (exps[b] / sum) * b
+                        dist[side] = d
+                    }
+
+                    val ax = gx + 0.5f
+                    val ay = gy + 0.5f
+                    val x1 = (ax - dist[0]) * stride   // left
+                    val y1 = (ay - dist[1]) * stride   // top
+                    val x2 = (ax + dist[2]) * stride   // right
+                    val y2 = (ay + dist[3]) * stride   // bottom
+                    val cx = (x1 + x2) / 2f
+                    val cy = (y1 + y2) / 2f
+                    raw.add(Raw(cx, cy, x2 - x1, y2 - y1, bestCls, bestScore))
+                }
+            }
+        }
+
+        // NMS
+        val sorted = raw.sortedByDescending { it.score }.take(MAX_DETECTIONS * 4)
+        val kept = mutableListOf<Raw>()
+        for (d in sorted) {
+            if (kept.size >= MAX_DETECTIONS) break
+            if (kept.none { it.cls == d.cls && boxIou(it.cx, it.cy, it.w, it.h, d.cx, d.cy, d.w, d.h) > IOU_THRESHOLD })
+                kept.add(d)
+        }
+
+        val scale = 1.0f / INPUT_SIZE
+        return kept.map { d ->
+            DetectionResult(DC_CLASSES[d.cls], d.score,
+                bboxPolygon(d.cx, d.cy, d.w, d.h, scale), d.cls)
         }
     }
 

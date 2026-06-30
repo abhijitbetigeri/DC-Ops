@@ -1,0 +1,8 @@
+{
+  "name": "dc-ops-nvl72-3d-model",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python -m http.server 8000"
+  }
+}
